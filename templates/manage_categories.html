@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Manage Categories{% endblock %}
+
+{% block content %}
+<h1>Categories</h1>
+<form method="POST">
+    <input type="text" name="name" placeholder="New Category" required>
+    <button type="submit">Add</button>
+</form>
+<ul>
+{% for cat in categories %}
+    <li>{{ cat.name }}</li>
+{% endfor %}
+</ul>
+{% endblock %}
