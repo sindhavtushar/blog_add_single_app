@@ -1,8 +1,10 @@
-# xlsx file
-info.xlsx
-
-# .env file
+# Sensitive data
 .env
 
-# Python cache
-__pycache__
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Office files / Backups
+*.xlsx
+* copy.py
