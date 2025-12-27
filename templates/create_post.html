@@ -4,7 +4,9 @@
 {% block content %}
 <div class="container mt-4">
     <h2>Create New Post</h2>
-    <form method="POST">
+
+    <form method="POST" enctype="multipart/form-data">
+
         <!-- Title -->
         <div class="mb-3">
             <label for="title" class="form-label">Title</label>
@@ -28,8 +30,18 @@
             <textarea class="form-control" id="content" name="content" rows="8" required></textarea>
         </div>
 
+        <!-- Media Upload -->
+        <div class="mb-3">
+            <label for="media" class="form-label">Upload Media (Image / Video / Audio)</label>
+            <input type="file" class="form-control" id="media" name="media" multiple
+                   accept="image/*,video/*,audio/*">
+            <small class="text-muted">You can upload multiple files at once.</small>
+        </div>
+
+        <!-- Submit / Cancel Buttons -->
         <button type="submit" class="btn btn-primary">Publish Post</button>
         <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+
     </form>
 </div>
 {% endblock %}

@@ -2,129 +2,8 @@
 {% block title %}{{ post.title }}{% endblock %}
 
 {% block content %}
-
 <div class="row justify-content-center">
     <div class="col-lg-8">
-
-        <!-- ================= Post Card ================= -->
-        <div class="card shadow-sm mb-4">
-
-            <!-- Post Image -->
-            {% if post.image_url %}
-                <img src="../static/images/flask_theme.jpg"
-                     class="card-img-top"
-                     alt="{{ post.title }}"
-                     style="max-height: 350px; object-fit: cover;">
-            {% endif %}
-
-            <div class="card-body">
-
-                <!-- Title -->
-                <h1 class="card-title mb-3">
-                    {{ post.title }}
-                </h1>
-
-                <img src="../static/images/flask_theme.jpg"
-                     class="card-img-top"
-                     alt="{{ post.title }}"
-                     style="max-height: 350px; object-fit: cover;">
-                     &nbsp;
-
-                <!-- Meta Info -->
-
-                <p class="text-muted small mb-4">
-                    By <strong>{{ post.author.username }}</strong>
-                    · {{ post.created_at.strftime('%b %d, %Y') }}
-                    {% if post.updated_at %}
-                        · Updated {{ post.updated_at.strftime('%b %d, %Y') }}
-                    {% endif %}
-                    &nbsp;
-                    <!-- Category -->
-                    {% if post.category %}
-                        <span class="badge bg-secondary mb-2">
-                            {{ post.category.name }}
-                        </span>
-                    {% endif %}
-                </p>
-
-
-                <!-- Content -->
-                <div class="post-content fs-6 lh-lg">
-                    {{ post.content }}
-                </div>
-
-            </div>
-        </div>
-
-        <!-- ================= Interaction Section ================= -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-
-                <!-- Like / Share -->
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <form action="{{url_for('post_like', post_id=post.id)}}" method="post">
-                        <button class="btn btn-outline-danger btn-sm">
-                            ❤️ {{ post.likes | length }} Likes
-                        </button>
-                    </form>
-                    <!-- Pass the specific post ID to the function -->
-                    <button class="btn btn-sm btn-outline-secondary" onclick="copyShareLink('post-{{ post.id }}')">
-                        <i class="bi bi-share"></i> Copy Share Link
-                    </button>
-                            
-                </div>
-
-                <hr>
-
-                <!-- Comment Form -->
-                <h6 class="mb-3">Leave a Comment</h6>
-
-                {% if current_user.is_authenticated %}
-                    <form method="post"
-                        action="{{ url_for('post_comment', post_id=post.id) }}">
-                        <div class="mb-3">
-                            <textarea class="form-control"
-                                    name="comment"
-                                    rows="3"
-                                    placeholder="Write your comment..."
-                                    required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            Post Comment
-                        </button>
-                    </form>
-                {% else %}
-                    <p class="text-muted small">
-                        Please <a href="{{ url_for('login') }}">login</a> to like or comment.
-                    </p>
-                {% endif %}
-
-            </div>
-        </div>
-
-        <!-- ================= Comments List ================= -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h6 class="mb-3">Comments</h6>
-
-                {% if post.comments %}
-                    {% for comment in post.comments %}
-                        <div class="mb-3">
-                            <strong>{{ comment.user.username }}</strong>
-                            <span class="text-muted small">
-                                · {{ comment.created_at.strftime('%b %d, %Y') }}
-                            </span>
-                            <p class="mb-1">{{ comment.content }}</p>
-                            <hr>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted small">
-                        No comments yet. Be the first one!
-                    </p>
-                {% endif %}
-            </div>
-        </div>
 
         <!-- Back Button -->
         <div class="mb-4">
@@ -133,8 +12,152 @@
             </a>
         </div>
 
+        <!-- ================= Post Card ================= -->
+        <div class="card shadow-sm mb-4">
+
+            <!-- ================= MEDIA SECTION ================= -->
+
+            {% if images %}
+            <!-- Image Carousel -->
+            <div id="carouselPostMedia" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for media in images %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <img src="{{ url_for('static', filename=media.file_path) }}"
+                             class="d-block w-100"
+                             alt="Post Image"
+                             style="max-height: 400px; object-fit: cover;">
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if images|length > 1 %}
+                <button class="carousel-control-prev" type="button"
+                        data-bs-target="#carouselPostMedia" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button"
+                        data-bs-target="#carouselPostMedia" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <!-- Fallback Image -->
+            <img src="{{ url_for('static', filename='images/flask_theme.jpg') }}"
+                 class="card-img-top"
+                 alt="Default Image"
+                 style="max-height: 400px; object-fit: cover;">
+            {% endif %}
+
+            <!-- ================= VIDEOS ================= -->
+            {% for media in videos %}
+            <div class="p-3">
+                <video controls class="w-100 rounded">
+                    <source src="{{ url_for('static', filename=media.file_path) }}" type="video/mp4">
+                </video>
+            </div>
+            {% endfor %}
+
+            <!-- ================= AUDIOS ================= -->
+            {% for media in audios %}
+            <div class="p-3">
+                <audio controls class="w-100">
+                    <source src="{{ url_for('static', filename=media.file_path) }}" type="audio/mpeg">
+                </audio>
+            </div>
+            {% endfor %}
+
+            <!-- ================= POST CONTENT ================= -->
+            <div class="card-body">
+                <h1 class="card-title mb-3">{{ post.title }}</h1>
+
+                <p class="text-muted small mb-4">
+                    By <strong>{{ post.author.username }}</strong>
+                    · {{ post.created_at.strftime('%b %d, %Y') }}
+                    {% if post.updated_at %}
+                        · Updated {{ post.updated_at.strftime('%b %d, %Y') }}
+                    {% endif %}
+                    {% if post.category %}
+                        · <span class="badge bg-secondary">{{ post.category.name }}</span>
+                    {% endif %}
+                </p>
+
+                <div class="post-content fs-6 lh-lg">
+                    {{ post.content | safe }}
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= INTERACTION ================= -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+
+                <!-- Likes / Share -->
+                <div class="d-flex align-items-center gap-3 mb-3">
+
+                    <form action="{{ url_for('toggle_like', post_id=post.id) }}" method="POST">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            ❤️ {{ post.likes | length }} Likes
+                        </button>
+                    </form>
+
+
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="navigator.clipboard.writeText(window.location.href)">
+                        🔗 Copy Link
+                    </button>
+                </div>
+
+                <hr>
+
+                <!-- Comment Form -->
+                <h6 class="mb-3">Leave a Comment</h6>
+
+                {% if current_user.is_authenticated %}
+                <form method="post" action="{{ url_for('post_comment', post_id=post.id) }}">
+                    <div class="mb-3">
+                        <textarea class="form-control"
+                                  name="comment"
+                                  rows="3"
+                                  placeholder="Write your comment..."
+                                  required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        Post Comment
+                    </button>
+                </form>
+                {% else %}
+                <p class="text-muted small">
+                    Please <a href="{{ url_for('login') }}">login</a> to comment.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ================= COMMENTS ================= -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="mb-3">Comments</h6>
+
+                {% if post.comments %}
+                    {% for comment in post.comments | sort(attribute='created_at') %}
+                    <div class="mb-3">
+                        <strong>{{ comment.user.username }}</strong>
+                        <span class="text-muted small">
+                            · {{ comment.created_at.strftime('%b %d, %Y') }}
+                        </span>
+                        <p class="mb-1">{{ comment.content }}</p>
+                        <hr>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small">No comments yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 </div>
-
 {% endblock %}
-

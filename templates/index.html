@@ -5,12 +5,12 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Latest Blogs</h2>
     {% if current_user.is_authenticated %}
-        <a href="{{ url_for('create_post') }}" class="btn btn-primary">
-            + New Post
+        <!-- Modern Create Blog button -->
+        <a href="{{ url_for('create_post') }}" class="btn btn-primary btn shadow-sm">
+            + Create Blog
         </a>
     {% endif %}
 </div>
-
 
 {% if posts %}
 <div class="row g-4">
@@ -20,8 +20,9 @@
 
             <!-- Post Image -->
             <div class="position-relative">
-                {% if post.image_url %}
-                    <img src="{{ post.image_url }}"
+                {% set first_image = post.media | selectattr('media_type', 'equalto', 'image') | list | first %}
+                {% if first_image %}
+                    <img src="{{ url_for('static', filename=first_image.file_path) }}"
                          class="card-img-top"
                          alt="{{ post.title }}">
                 {% else %}
@@ -36,7 +37,7 @@
                 <!-- Title -->
                 <h5 class="card-title mb-2">
                     <a href="{{ url_for('post_detail', post_id=post.id) }}"
-                    class="text-decoration-none text-dark stretched-link">
+                       class="text-decoration-none text-dark stretched-link">
                         {{ post.title }}
                     </a>
                 </h5>
@@ -47,10 +48,8 @@
                     {% if post.updated_at %}
                         · Updated {{ post.updated_at.strftime('%b %d, %Y') }}
                     {% endif %}
-                    &nbsp;
-                    <!-- Category -->
                     {% if post.category %}
-                        <span class="badge bg-secondary mb-2 align-self-start">
+                        · <span class="badge bg-secondary mb-2 align-self-start">
                             {{ post.category.name }}
                         </span>
                     {% endif %}
@@ -78,8 +77,5 @@
 {% else %}
 <p class="text-muted">No posts available.</p>
 {% endif %}
-
-
-
 
 {% endblock %}

@@ -2,23 +2,9 @@ from flask import session
 from sqlalchemy import column, select, table
 from sqlalchemy.orm import joinedload
 from database import db
-from models.db_tables import Comment, Like, Post, User
+from models.db_tables import Comment, Like, Post, PostMedia, User
 
 def get_all_blogs() -> Post:
-    
-    # return Post.query.all()
-    
-    # posts = db.session.scalars(db.select(Post)).all()
-    # return posts
-    
-    # query = """SELECT id, title, slug, content, is_published, created_at, updated_at, author_id, category_id
-	# FROM public.posts;"""
-    # posts = db.session.execute(query)
-    # return posts
-
-    # query = select(column('id'), column('title'), column('created_at'), column('updated_at')).select_from(table('posts'))
-    # result = db.session.execute(query)
-    # return result
 
     return (
         db.session.query(Post)
@@ -30,16 +16,26 @@ def get_all_blogs() -> Post:
     )
 
 def get_post_by_id(post_id):
-    return (
+    post = (
         db.session.query(Post)
         .options(
             joinedload(Post.author),
             joinedload(Post.category),
+            joinedload(Post.media),
             joinedload(Post.comments).joinedload(Comment.user),
             joinedload(Post.likes)
         )
         .filter(Post.id == post_id)
         .first()
+    )
+    return post
+
+def get_post_media_by_post_id(post_id):
+    return (
+        db.session.query(PostMedia)
+        .filter(PostMedia.post_id == post_id)
+        .order_by(PostMedia.created_at.asc())
+        .all()
     )
 
 def add_comment(post_id, user_id, comment_msg):
@@ -71,6 +67,34 @@ def like_post(post_id, user_id):
     db.session.commit()
     
     return True
+
+def get_user_profile(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return None
+
+    posts = Post.query.filter_by(author_id=user_id).order_by(Post.created_at.desc()).all()
+
+    total_likes = 0
+    total_comments = 0
+
+    for post in posts:
+        post.likes_count = len(post.likes)
+        post.comments_count = len(post.comments)
+        total_likes += post.likes_count
+        total_comments += post.comments_count
+
+    profile_data = {
+        "username": user.username,
+        "email": user.email,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "posts": posts,
+        "total_likes": total_likes,
+        "total_comments": total_comments
+    }
+
+    return profile_data
 
 
 # # ---------------Testing of functions ----------------------------------
