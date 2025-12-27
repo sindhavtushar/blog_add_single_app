@@ -4,18 +4,18 @@ from database import db
 from models.db_tables import User, AuthToken
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# -------------------
+
 # PASSWORD
-# -------------------
+
 def hash_password(password: str) -> str:
     return generate_password_hash(password)
 
 def verify_password(user: User, password: str) -> bool:
     return check_password_hash(user.password_hash, password)
 
-# -------------------
+
 # USER CREATION
-# -------------------
+
 def create_user(username: str, email: str, password: str) -> User:
     new_user = User(
         username=username,
@@ -27,9 +27,9 @@ def create_user(username: str, email: str, password: str) -> User:
     db.session.commit()
     return new_user
 
-# -------------------
+
 # OTP / TOKEN
-# -------------------
+
 def generate_otp_token(user: User, token_type: str = "login_otp", minutes_valid: int = 10) -> AuthToken:
     """
     token_type: 'login_otp' or 'password_reset'
@@ -59,9 +59,9 @@ def verify_otp_token(user: User, otp_str: str, token_type: str = "login_otp") ->
         return True
     return False
 
-# -------------------
+
 # PASSWORD RESET
-# -------------------
+
 def reset_password(user: User, new_password: str):
     user.password_hash = hash_password(new_password)
     db.session.commit()

@@ -9,9 +9,9 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from database import db
 
-# =====================================================
+
 # USERS
-# =====================================================
+
 class User(db.Model, UserMixin):
     __tablename__ = "users"
 
@@ -31,9 +31,9 @@ class User(db.Model, UserMixin):
     tokens = relationship("AuthToken", back_populates="user", cascade="all, delete")
     sessions = relationship("Session", back_populates="user", cascade="all, delete")
 
-# =====================================================
+
 # AUTH TOKENS
-# =====================================================
+
 class AuthToken(db.Model):
     __tablename__ = "auth_tokens"
 
@@ -47,9 +47,9 @@ class AuthToken(db.Model):
 
     user = relationship("User", back_populates="tokens")
 
-# =====================================================
+
 # SESSIONS
-# =====================================================
+
 class Session(db.Model):
     __tablename__ = "sessions"
 
@@ -61,9 +61,9 @@ class Session(db.Model):
 
     user = relationship("User", back_populates="sessions")
 
-# =====================================================
+
 # CATEGORIES
-# =====================================================
+
 class Category(db.Model):
     __tablename__ = "categories"
 
@@ -73,9 +73,9 @@ class Category(db.Model):
 
     posts = relationship("Post", back_populates="category")
 
-# =====================================================
+
 # POSTS
-# =====================================================
+
 class Post(db.Model):
     __tablename__ = "posts"
 
@@ -97,9 +97,9 @@ class Post(db.Model):
     likes = relationship("Like", back_populates="post", cascade="all, delete")
     tags = relationship("Tag", secondary="post_tags", back_populates="posts")
 
-# =====================================================
+
 # POST MEDIA
-# =====================================================
+
 class PostMedia(db.Model):
     __tablename__ = "post_media"
 
@@ -111,9 +111,9 @@ class PostMedia(db.Model):
 
     post = relationship("Post", back_populates="media")
 
-# =====================================================
+
 # TAGS
-# =====================================================
+
 class Tag(db.Model):
     __tablename__ = "tags"
 
@@ -122,18 +122,18 @@ class Tag(db.Model):
 
     posts = relationship("Post", secondary="post_tags", back_populates="tags")
 
-# =====================================================
+
 # POST_TAGS
-# =====================================================
+
 class PostTag(db.Model):
     __tablename__ = "post_tags"
 
     post_id = Column(Integer, ForeignKey("posts.id"), primary_key=True)
     tag_id = Column(Integer, ForeignKey("tags.id"), primary_key=True)
 
-# =====================================================
+
 # COMMENTS
-# =====================================================
+
 class Comment(db.Model):
     __tablename__ = "comments"
 
@@ -146,9 +146,9 @@ class Comment(db.Model):
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
 
-# =====================================================
+
 # LIKES
-# =====================================================
+
 class Like(db.Model):
     __tablename__ = "likes"
 
