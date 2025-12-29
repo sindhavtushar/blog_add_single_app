@@ -2,7 +2,7 @@ from flask import session
 from sqlalchemy import column, select, table
 from sqlalchemy.orm import joinedload
 from database import db
-from models.db_tables import Comment, Like, Post, PostMedia, User
+from models.db_tables import Category, Comment, Like, Post, PostMedia, User
 
 def get_all_blogs() -> Post:
 
@@ -91,11 +91,22 @@ def get_user_profile(user_id):
         "created_at": user.created_at,
         "posts": posts,
         "total_likes": total_likes,
-        "total_comments": total_comments
+        "total_comments": total_comments,
+        "user_profile_image":user.profile.profile_picture
     }
 
     return profile_data
 
+def update_post(post_id, ):
+    post = Post.query.filter_by(id=post).first()
+    if not post:
+        return False
+    
+def all_categories():
+    return(
+        db.session.query(Category)
+        .all()
+    )
 
 # # ---------------Testing of functions ----------------------------------
 

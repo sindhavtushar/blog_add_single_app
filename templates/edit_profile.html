@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('profile') }}"
+       class="btn btn-sm btn-outline-secondary me-3 d-inline-flex align-items-center">
+        <i class="bi bi-arrow-left-circle"></i>
+    </a>
+    <h2 class="mb-0">Edit Profile</h2>
+</div>
+
+<!-- Edit Card -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <!-- Bio -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Bio</label>
+                <input type="text"
+                       name="bio"
+                       class="form-control"
+                       value="{{ profile.bio }}">
+            </div>
+
+            <!-- About -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">About</label>
+                <textarea name="about" rows="4" class="form-control">{{ profile.about }}</textarea>
+            </div>
+
+            <!-- Location -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Location</label>
+                <input type="text" name="location" class="form-control" value="{{ profile.location }}">
+            </div>
+
+            <!-- Website -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Website</label>
+                <input type="text" name="website" class="form-control" value="{{ profile.website }}">
+            </div>
+
+            <!-- Gender -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Gender</label>
+                <select name="gender" class="form-select">
+                    <option value="male" {% if profile.gender == "male" %}selected{% endif %}>Male</option>
+                    <option value="female" {% if profile.gender == "female" %}selected{% endif %}>Female</option>
+                    <option value="other" {% if profile.gender == "other" %}selected{% endif %}>Other</option>
+                    <option value="prefer_not_to_say" {% if profile.gender == "prefer_not_to_say" %}selected{% endif %}>Prefer not to say</option>
+                </select>
+            </div>
+
+            <!-- Profile Picture Upload -->
+            <!-- <div class="mb-4">
+                <label class="form-label fw-semibold">Profile Picture</label>
+                {% if profile.profile_picture %}
+                    <img src="{{ url_for('static', filename=profile.profile_picture.split('static/')[1]) }}"
+                         class="d-block mb-2 rounded-circle"
+                         width="100" height="100">
+                {% endif %}
+                <input type="file" name="profile_picture" class="form-control" accept="image/*">
+                <small class="text-muted">Upload a new profile picture to replace the existing one</small>
+            </div> -->
+
+            <!-- Media Upload -->
+            <div class="mb-3">
+                <label for="media" class="form-label">Upload Media (Image / Video / Audio)</label>
+                <input type="file" class="form-control" id="media" name="media" multiple
+                    accept="image/*,video/*,audio/*">
+                <small class="text-muted">You can upload multiple files at once.</small>
+            </div>
+
+
+            <!-- Cover Photo Upload -->
+            <!-- <div class="mb-4">
+                <label class="form-label fw-semibold">Cover Photo</label>
+                {% if profile.cover_photo %}
+                    <img src="{{ url_for('static', filename=profile.cover_photo.split('static/')[1]) }}"
+                         class="d-block mb-2 rounded"
+                         style="max-width: 100%; max-height: 200px; object-fit: cover;">
+                {% endif %}
+                <input type="file" name="cover_photo" class="form-control" accept="image/*">
+                <small class="text-muted">Upload a new cover photo to replace the existing one</small>
+            </div> -->
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <button class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Save Changes
+                </button>
+
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

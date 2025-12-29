@@ -2,77 +2,90 @@
 {% block title %}Blog Posts{% endblock %}
 
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Latest Blogs</h2>
+    <h2 class="fw-bold">📝 Latest Blogs</h2>
     {% if current_user.is_authenticated %}
-        <!-- Modern Create Blog button -->
-        <a href="{{ url_for('create_post') }}" class="btn btn-primary btn shadow-sm">
-            + Create Blog
+        <a href="{{ url_for('create_post') }}" class="btn btn-primary px-4 shadow-sm">
+            <i class="bi bi-plus-lg"></i> Create Blog
         </a>
     {% endif %}
 </div>
 
 {% if posts %}
 <div class="row g-4">
-    {% for post in posts %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm post-card">
 
-            <!-- Post Image -->
-            <div class="position-relative">
-                {% set first_image = post.media | selectattr('media_type', 'equalto', 'image') | list | first %}
-                {% if first_image %}
-                    <img src="{{ url_for('static', filename=first_image.file_path) }}"
-                         class="card-img-top"
-                         alt="{{ post.title }}">
-                {% else %}
-                    <img src="{{ url_for('static', filename='images/flask_theme.jpg') }}"
-                         class="card-img-top"
-                         alt="Default Image">
-                {% endif %}
-            </div>
+{% for post in posts %}
+<div class="col-md-6 col-lg-4">
+    <div class="card h-100 post-card border-0 shadow-sm">
 
-            <div class="card-body d-flex flex-column">
+        <!-- Image -->
+        {% set first_image = post.media | selectattr('media_type', 'equalto', 'image') | list | first %}
+        {% if first_image %}
+            <img src="{{ url_for('static', filename=first_image.file_path) }}"
+                 class="card-img-top"
+                 alt="{{ post.title }}">
+        {% else %}
+            <img src="{{ url_for('static', filename='images/flask_theme.jpg') }}"
+                 class="card-img-top"
+                 alt="Default Image">
+        {% endif %}
 
-                <!-- Title -->
-                <h5 class="card-title mb-2">
-                    <a href="{{ url_for('post_detail', post_id=post.id) }}"
-                       class="text-decoration-none text-dark stretched-link">
-                        {{ post.title }}
-                    </a>
-                </h5>
+        <div class="card-body">
 
-                <!-- Meta -->
-                <p class="text-muted small mb-2">
+            {% if post.category %}
+            <span class="badge bg-info mb-2 align-self-start">
+                {{ post.category.name }}
+            </span>
+            {% endif %}
+
+            <h5 class="card-title">
+                <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none text-dark">
+                    {{ post.title }}
+                </a>
+            </h5>
+
+            <p class="text-muted small mb-2">
+                <i class="bi bi-person"></i>
+                <span class="ms-1"><b>{{ post.author.username }}</b></span>
+                <br>
+
+                <i class="bi bi-clock"></i>
+                <span class="ms-1">
                     {{ post.created_at.strftime('%b %d, %Y') }}
-                    {% if post.updated_at %}
-                        · Updated {{ post.updated_at.strftime('%b %d, %Y') }}
-                    {% endif %}
-                    {% if post.category %}
-                        · <span class="badge bg-secondary mb-2 align-self-start">
-                            {{ post.category.name }}
-                        </span>
-                    {% endif %}
-                </p>
+                </span>
 
-                <!-- Excerpt -->
-                {% if post.content %}
-                    <p class="card-text text-muted mb-3">
-                        {{ post.content[:90] }}{% if post.content|length > 90 %}...{% endif %}
-                    </p>
-                {% endif %}
-
-                <!-- CTA -->
-                <div class="mt-auto">
-                    <span class="btn btn-outline-primary btn-sm">
-                        Read More →
+                {% if post.updated_at %}
+                    <span class="ms-2 text-muted">
+                        •
+                        <i class="bi bi-arrow-repeat ms-1"></i>
+                        Updated {{ post.updated_at.strftime('%b %d, %Y') }}
                     </span>
-                </div>
+                {% endif %}
+            </p>
 
+
+            <p class="card-text text-muted">
+                {{ post.content[:90] }}{% if post.content|length > 90 %}...{% endif %}
+            </p>
+
+            <div class="d-flex gap-2 mb-3">
+                <span class="badge bg-light text-dark">❤️ {{ post.likes | length }}</span>
+                <span class="badge bg-light text-dark">💬 {{ post.comments | length }}</span>
             </div>
+
+            <div class="mt-auto">
+                <a href="{{ url_for('post_detail', post_id=post.id) }}"
+                   class="btn btn-outline-primary btn-sm w-100">
+                    Read More →
+                </a>
+            </div>
+
         </div>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
+
 </div>
 {% else %}
 <p class="text-muted">No posts available.</p>

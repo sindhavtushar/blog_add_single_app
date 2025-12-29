@@ -2,35 +2,123 @@
 {% block title %}Edit Post{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Edit Post</h2>
 
-<form method="POST">
-    <div class="mb-3">
-        <label class="form-label">Title</label>
-        <input type="text" name="title" class="form-control"
-               value="{{ post.title }}" required>
+<!-- Header -->
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('index') }}"
+       class="btn btn-sm btn-outline-secondary me-3 d-inline-flex align-items-center">
+        <i class="bi bi-arrow-left-circle"></i>
+    </a>
+    <h2 class="mb-0">Edit Post</h2>
+</div>
+
+<!-- Edit Card -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <!-- Title -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Title</label>
+                <input type="text"
+                       name="title"
+                       class="form-control"
+                       value="{{ post.title }}"
+                       required>
+            </div>
+
+            <!-- Image Upload -->
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Update Post Image</label>
+
+                {% if images %}
+                <div id="carouselPostMedia"
+                    class="carousel slide mb-3 rounded overflow-hidden"
+                    data-bs-ride="carousel">
+
+                    <div class="carousel-inner">
+                        {% for media in images %}
+                        <div class="carousel-item {% if loop.first %}active{% endif %}">
+                            <img src="{{ url_for('static', filename=media.file_path) }}"
+                                class="d-block w-100"
+                                style="max-height: 350px; object-fit: cover;"
+                                alt="Post Image">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if images|length > 1 %}
+                    <button class="carousel-control-prev" type="button"
+                            data-bs-target="#carouselPostMedia" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button"
+                            data-bs-target="#carouselPostMedia" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- File input -->
+                <input type="file"
+                    name="image"
+                    class="form-control"
+                    accept="image/*">
+
+                <!-- Remove checkbox -->
+                <!-- {% if images %}
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="remove_image" id="removeImageCheck">
+                    <label class="form-check-label" for="removeImageCheck">
+                        Remove current image
+                    </label>
+                </div>
+                {% endif %} -->
+
+                <small class="text-muted d-block mt-1">
+                    Upload a new image to replace the existing one
+                </small>
+            </div>
+
+            <!-- Category -->
+            <div class="mb-3">
+                <label for="category_id" class="form-label">Category</label>
+                <select name="category_id" class="form-select">
+                    <option value="">Select category</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="new_category" class="form-control mt-2" placeholder="Or add new category">
+
+            </div>
+
+            <!-- Content -->
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Content</label>
+                <textarea name="content"
+                          rows="8"
+                          class="form-control"
+                          required>{{ post.content }}</textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <button class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Save Changes
+                </button>
+
+                <a href="{{ url_for('post_detail', post_id=post.id) }}"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
     </div>
+</div>
 
-    <div class="mb-3">
-        <label class="form-label">Category</label>
-        <select name="category_id" class="form-select">
-            {% for category in categories %}
-                <option value="{{ category.id }}"
-                    {% if post.category_id == category.id %}selected{% endif %}>
-                    {{ category.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Content</label>
-        <textarea name="content" rows="8"
-                  class="form-control" required>{{ post.content }}</textarea>
-    </div>
-
-    <button class="btn btn-success">Save Changes</button>
-    <a href="{{ url_for('post_detail', post_id=post.id) }}"
-       class="btn btn-secondary">Cancel</a>
-</form>
 {% endblock %}

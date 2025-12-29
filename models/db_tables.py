@@ -30,6 +30,44 @@ class User(db.Model, UserMixin):
     likes = relationship("Like", back_populates="user", cascade="all, delete")
     tokens = relationship("AuthToken", back_populates="user", cascade="all, delete")
     sessions = relationship("Session", back_populates="user", cascade="all, delete")
+    # One-to-one profile relationship
+    profile = db.relationship(
+        "UserProfile",
+        uselist=False,
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+class UserProfile(db.Model):
+    __tablename__ = "user_profiles"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True
+    )
+    
+    bio = Column(String(255))
+    about = Column(Text)
+    profile_picture = Column(String(500))  # URL or file path
+    cover_photo = Column(String(500))
+    website = Column(String(255))
+    location = Column(String(150))
+    
+    gender = Column(
+        Enum("male", "female", "other", "prefer_not_to_say", name="gender_types"),
+        default="prefer_not_to_say",
+        nullable=False
+    )
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    user = db.relationship("User", back_populates="profile")
 
 
 # AUTH TOKENS

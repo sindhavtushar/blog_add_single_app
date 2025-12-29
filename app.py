@@ -5,14 +5,14 @@ import time
 import uuid
 from slugify import slugify
 
-from services.blog_helpers import add_comment, get_all_blogs, get_post_by_id, get_post_media_by_post_id, get_user_profile, like_post
+from services.blog_helpers import add_comment, all_categories, get_all_blogs, get_post_by_id, get_post_media_by_post_id, get_user_profile, like_post
 from services.email_service import send_email
 from flask import Flask, abort, request, render_template, redirect, send_from_directory, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, login_required
 from werkzeug.utils import secure_filename
 
 from database import db
-from models.db_tables import Category, Like, Post, PostMedia, User
+from models.db_tables import Category, Like, Post, PostMedia, User, UserProfile
 from services.auth_helpers import create_user, generate_email_verification_token, generate_otp_token, reset_password, verify_email_token, verify_otp_token, verify_password
 
 app = Flask(__name__)
@@ -20,7 +20,17 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = secrets.token_hex()
-app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER")
+
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {
+    "image": {"png", "jpg", "jpeg", "gif"},
+    "video": {"mp4", "mov", "avi"},
+    "audio": {"mp3", "wav"}
+}
+
+UPLOAD_FOLDER = "D:/VisioByte/frameworks/flask/project/blog_app_single_app/T_APP/static/uploads"
+UPLOAD_FOLDER_USERS = "D:/VisioByte/frameworks/flask/project/blog_app_single_app/T_APP/static/uploads/users"
 
 # DB connection bind
 db.init_app(app)
@@ -40,14 +50,16 @@ def load_user(user_id):
 @app.route("/")
 def index():
     posts = get_all_blogs()
-    print(f'[DEBUG]: Total posts: {len(posts)}')
-    # file_path
     return render_template("index.html", posts=posts)
+    # print(f'[DEBUG]: Total posts: {len(posts)}')
+    # file_path
+    # return render_template('test.html', posts=posts)
+    # categories = all_categories()
+    # return render_template('test.html', categories=categories, posts=posts)
 
 # REGISTER
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    # Step can come from form (POST) or query string (GET)
     step = request.form.get("step") or request.args.get("step") or "1"
     email = request.form.get("email") or request.args.get("email")
 
@@ -55,8 +67,8 @@ def register():
 
         # -------- STEP 1: USER DETAILS --------
         if step == "1":
-            username = request.form["username"]
-            email = request.form["email"]
+            username = request.form["username"].strip()
+            email = request.form["email"].strip().lower()
             password = request.form["password"]
             confirm_password = request.form["confirm_password"]
 
@@ -64,35 +76,44 @@ def register():
                 flash("Passwords do not match", "danger")
                 return render_template("register.html", step="1")
 
-            # Check if email already exists
-            user = User.query.filter_by(email=email).first()
-            if user:
-                if user.is_email_verified:
+            existing_user = User.query.filter_by(email=email).first()
+
+            # Email already exists
+            if existing_user:
+                if existing_user.is_email_verified:
                     flash("Email already registered. Please login.", "info")
                     return redirect(url_for("login"))
                 else:
-                    # Resend OTP if email exists but not verified
-                    otp_token = generate_email_verification_token(user)
-                    # Send email here
+                    # Resend OTP
+                    otp_token = generate_email_verification_token(existing_user)
                     send_email(
-                        to=user.email,
+                        to=existing_user.email,
                         subject="Verify your email",
                         message=f"Your OTP is {otp_token.token}"
                     )
                     flash("OTP resent! Check your email.", "success")
-                    return render_template("register.html", step="2", email=email)
+                    return render_template(
+                        "register.html",
+                        step="2",
+                        email=email
+                    )
 
-            # Create new user
+            # Create new user + profile
             new_user = create_user(username, email, password)
+
             otp_token = generate_email_verification_token(new_user)
-            # Send email
             send_email(
                 to=new_user.email,
                 subject="Verify your email",
                 message=f"Your OTP is {otp_token.token}"
             )
+
             flash("OTP sent! Check your email.", "success")
-            return render_template("register.html", step="2", email=email)
+            return render_template(
+                "register.html",
+                step="2",
+                email=email
+            )
 
         # -------- STEP 2: VERIFY OTP --------
         elif step == "2":
@@ -101,15 +122,20 @@ def register():
 
             if not user or not verify_email_token(user, input_otp):
                 flash("Invalid OTP", "danger")
-                return render_template("register.html", step="2", email=email)
+                return render_template(
+                    "register.html",
+                    step="2",
+                    email=email
+                )
 
             user.is_email_verified = True
             db.session.commit()
+
             flash("Email verified! You can now login.", "success")
             return redirect(url_for("login"))
 
-    # Default: render step 1
     return render_template("register.html", step=step, email=email)
+
 
 # LOGIN
 @app.route("/login", methods=["GET","POST"])
@@ -206,6 +232,59 @@ def profile():
     )
 
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/profile/edit", methods=["GET", "POST"])
+@login_required
+def edit_profile():
+    profile = current_user.profile
+
+    if request.method == "POST":
+        # Text fields
+        profile.bio = request.form.get("bio", "")
+        profile.about = request.form.get("about", "")
+        profile.location = request.form.get("location", "")
+        profile.website = request.form.get("website", "")
+        profile.gender = request.form.get("gender", "prefer_not_to_say")
+
+        print('--------------------------------profile pic----------------------------')
+
+        # Handle profile picture upload
+        files = request.files.getlist("media")  # multiple files support
+        for file in files:
+            print('---------------working-------------------')
+            if file and file.filename != "":
+                media_type = get_media_type(file.filename)
+                if not media_type:
+                    flash(f"File {file.filename} has unsupported type!", "danger")
+                    continue
+
+                # Ensure upload folder exists
+                os.makedirs(UPLOAD_FOLDER_USERS, exist_ok=True)
+
+                # Create unique filename
+                unique_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+                save_path = os.path.join(UPLOAD_FOLDER_USERS, unique_filename)
+                
+                print(f'[user profile pic Save path]: {save_path}')
+                file.save(save_path)
+
+                relative_path = f"uploads/users/{unique_filename}"
+                
+                profile.profile_picture = relative_path
+                print('saved path in database', relative_path)
+
+        
+        db.session.commit()
+        print('-------------------committed------------------------')
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for("edit_profile"))
+
+
+    return render_template("edit_profile.html", profile=profile)
+
+
 # POST DETAIL
 @app.route("/post/<int:post_id>")
 def post_detail(post_id):
@@ -230,16 +309,6 @@ def post_detail(post_id):
 
 # CREATE POST
 
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {
-    "image": {"png", "jpg", "jpeg", "gif"},
-    "video": {"mp4", "mov", "avi"},
-    "audio": {"mp3", "wav"}
-}
-
-UPLOAD_FOLDER = 'static/uploads' # os.getenv('UPLOAD_FOLDER')
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
 # Helper function to detect media type
 def get_media_type(filename):
     ext = filename.rsplit(".", 1)[-1].lower()
@@ -257,8 +326,22 @@ def create_post():
     if request.method == "POST":
         title = request.form["title"]
         content = request.form["content"]
-        category_id = request.form.get("category_id")  # optional
         slug = slugify(title)
+
+        category_id = request.form.get("category_id")
+        new_category_name = request.form.get("new_category").strip()
+
+        if new_category_name:
+            # Check if category already exists
+            existing = Category.query.filter_by(name=new_category_name).first()
+            if existing:
+                category_id = existing.id
+            else:
+                new_cat = Category(name=new_category_name)
+                db.session.add(new_cat)
+                db.session.commit()
+                category_id = new_cat.id
+
 
         # Create post
         new_post = Post(
@@ -281,11 +364,11 @@ def create_post():
                     continue
 
                 # Ensure upload folder exists
-                os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
                 # Create unique filename
                 unique_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-                save_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                save_path = os.path.join(UPLOAD_FOLDER, unique_filename)
                 
                 print(f'[Upload File Save path]: {save_path}')
                 file.save(save_path)
@@ -312,7 +395,7 @@ def create_post():
 
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 
 # POST COMMENT
@@ -368,6 +451,97 @@ def toggle_like(post_id):
     return redirect(request.referrer or url_for("index"))
 
 
+@app.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_post(post_id):
+    # Get the post
+    post = Post.query.get_or_404(post_id)
+
+    # Security check
+    if post.author != current_user:
+        abort(403)
+
+    # Get media for display
+    all_media = get_post_media_by_post_id(post_id)
+    images = [m for m in all_media if m.media_type == "image"]
+    videos = [m for m in all_media if m.media_type == "video"]
+    audios = [m for m in all_media if m.media_type == "audio"]
+
+    if request.method == "POST":
+        # Form fields
+        title = request.form["title"]
+        content = request.form["content"]
+        category_id = request.form.get("category_id")  # optional
+        remove_image = request.form.get("remove_image")  # checkbox
+        slug = slugify(title)
+        post.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+        # Update post
+        post.title = title
+        post.slug = slug
+        post.content = content
+        post.category_id = category_id if category_id else None
+        db.session.commit()  # Commit updated post
+
+        # Handle file upload
+        uploaded_file = request.files.get("image")
+
+        if uploaded_file and uploaded_file.filename != "":
+            media_type = get_media_type(uploaded_file.filename)
+            if not media_type:
+                flash(f'File {uploaded_file.filename} has unsupported type!', 'danger')
+            else:
+                # Delete old images
+                for img in images:
+                    old_path = os.path.join(UPLOAD_FOLDER, img.file_path)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                    db.session.delete(img)
+
+                # Save new image
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                unique_filename = f"{uuid.uuid4().hex}_{secure_filename(uploaded_file.filename)}"
+                save_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                uploaded_file.save(save_path)
+                relative_path = f"uploads/{unique_filename}"
+
+                # Add new media record
+                new_media = PostMedia(
+                    post_id=post.id,
+                    file_path=relative_path,
+                    media_type=media_type,
+                    created_at=datetime.datetime.now(datetime.timezone.utc)
+                )
+                db.session.add(new_media)
+                db.session.commit()
+
+        # Handle remove image checkbox
+        elif remove_image:
+            for img in images:
+                old_path = os.path.join(UPLOAD_FOLDER, img.file_path)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                db.session.delete(img)
+            db.session.commit()
+
+        flash("Post updated successfully!", "success")
+        return redirect(url_for("post_detail", post_id=post.id))
+
+    return render_template(
+        "edit_post.html",
+        post=post,
+        images=images,
+        videos=videos,
+        audios=audios
+    )
+
+
+
+@app.route("/post/<int:post_id>/delete", methods=["GET", "POST"])
+@login_required
+def delete_post(post_id):
+    return f'Delete page'
+    
 
 if __name__ == "__main__":
-    app.run(debug = True)
+    app.run(debug = True, host="0.0.0.0")

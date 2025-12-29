@@ -12,3 +12,5 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
+    app.config["UPLOAD_FOLDER_USERS"] = os.environ.get("UPLOAD_FOLDER_USERS")
+

@@ -16,12 +16,14 @@
         <!-- Category -->
         <div class="mb-3">
             <label for="category_id" class="form-label">Category</label>
-            <select class="form-select" id="category_id" name="category_id">
+            <select name="category_id" class="form-select">
                 <option value="">Select category</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.name }}</option>
                 {% endfor %}
             </select>
+            <input type="text" name="new_category" class="form-control mt-2" placeholder="Or add new category">
+
         </div>
 
         <!-- Content -->

@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta
 from database import db
-from models.db_tables import User, AuthToken
+from models.db_tables import User, AuthToken, UserProfile
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -23,9 +23,18 @@ def create_user(username: str, email: str, password: str) -> User:
         password_hash=hash_password(password),
         is_email_verified=False
     )
+
+    # Create empty profile with default gender
+    new_user.profile = UserProfile(
+        bio="",
+        about="",
+        gender="prefer_not_to_say"
+    )
+
     db.session.add(new_user)
     db.session.commit()
     return new_user
+
 
 
 # OTP / TOKEN
