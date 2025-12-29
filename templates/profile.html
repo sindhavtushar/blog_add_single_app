@@ -4,18 +4,16 @@
 {% block content %}
 
 <!-- Profile Header -->
-<div class="card border-0 shadow-sm mb-4 p-3">
+<div class="card profile-header mb-4">
     <div class="d-flex flex-md-row flex-column align-items-center gap-4">
 
-        <!-- Avatar or User Image -->
+        <!-- Avatar -->
         {% if profile.user_profile_image %}
         <img src="{{ url_for('static', filename=profile.user_profile_image) }}" 
-             class="rounded-circle border border-2 border-light shadow-sm"
-             alt="User profile Image" 
-             style="width:110px; height:110px; object-fit:cover;">
+             alt="User profile Image">
         {% else %}
-        <div class="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center shadow-sm"
-             style="width:110px; height:110px; font-size:42px; font-weight:600;">
+        <div class="avatar-initial bg-primary text-white d-flex justify-content-center align-items-center shadow-sm" 
+             style="font-size:42px; font-weight:600;">
             {{ profile.username[0]|upper }}
         </div>
         {% endif %}
@@ -24,7 +22,6 @@
         <div class="text-center text-md-start flex-grow-1">
             <h3 class="fw-bold mb-1">{{ profile.username }}</h3>
             <p class="text-muted mb-1">{{ profile.email }}</p>
-
             <div class="d-flex flex-wrap gap-2 mt-2">
                 <span class="badge {{ 'bg-success' if profile.is_active else 'bg-danger' }}">
                     {{ 'Active' if profile.is_active else 'Inactive' }}
@@ -45,18 +42,17 @@
 </div>
 
 <!-- Stats + Action -->
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 profile-stats">
     <div class="d-flex gap-3 flex-wrap">
-        <div class="bg-white p-3 rounded shadow-sm text-center">
+        <div class="card">
             <h5 class="fw-bold mb-0">{{ profile.posts|length }}</h5>
             <small class="text-muted">Blogs</small>
         </div>
-        <div class="bg-white p-3 rounded shadow-sm text-center">
+        <div class="card">
             <h5 class="fw-bold mb-0">{{ total_likes }}</h5>
             <small class="text-muted">Likes</small>
         </div>
-        <div class="bg-white p-3 rounded shadow-sm text-center">
+        <div class="card">
             <h5 class="fw-bold mb-0">{{ total_comments }}</h5>
             <small class="text-muted">Comments</small>
         </div>
@@ -72,29 +68,25 @@
 <div class="row g-4">
     {% for post in profile.posts %}
     <div class="col-md-6 col-lg-4">
-        <div class="card h-100 post-card border-0 shadow-sm">
+        <div class="card post-card h-100">
 
             {% if post.media %}
             <img src="{{ url_for('static', filename=post.media[0].file_path) }}" 
-                 class="card-img-top" alt="{{ post.title }}" style="object-fit: cover; height:200px;">
+                 class="card-img-top" alt="{{ post.title }}">
             {% endif %}
 
             <div class="card-body d-flex flex-column">
                 <h5 class="card-title">{{ post.title }}</h5>
-
-                <p class="card-text text-muted">
+                <p class="card-text">
                     {{ post.content[:100] }}{% if post.content|length > 100 %}...{% endif %}
                 </p>
-
                 <div class="mb-2">
                     <span class="me-3">❤️ {{ post.likes_count }}</span>
                     <span>💬 {{ post.comments_count }}</span>
                 </div>
-
                 <div class="d-flex justify-content-between align-items-center mt-auto">
                     <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y') }}</small>
-                    <a href="{{ url_for('post_detail', post_id=post.id) }}" 
-                       class="btn btn-outline-primary btn-sm">View</a>
+                    <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-outline-primary btn-sm">View</a>
                 </div>
             </div>
 

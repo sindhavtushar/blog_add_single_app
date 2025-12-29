@@ -46,11 +46,23 @@ def load_user(user_id):
     return User.query.get(user_id)
 
 
-# HOME
+
 @app.route("/")
 def index():
     posts = get_all_blogs()
+    
+    # Filter out posts authored by the current user if logged in
+    if current_user.is_authenticated:
+        posts = [post for post in posts if post.author_id != current_user.id]
+    
     return render_template("index.html", posts=posts)
+
+
+# # HOME
+# @app.route("/")
+# def index():
+#     posts = get_all_blogs()
+#     return render_template("index.html", posts=posts)
     # print(f'[DEBUG]: Total posts: {len(posts)}')
     # file_path
     # return render_template('test.html', posts=posts)
@@ -63,6 +75,7 @@ def register():
     step = request.form.get("step") or request.args.get("step") or "1"
     email = request.form.get("email") or request.args.get("email")
 
+    # -------- HANDLE POST REQUEST --------
     if request.method == "POST":
 
         # -------- STEP 1: USER DETAILS --------
@@ -72,9 +85,10 @@ def register():
             password = request.form["password"]
             confirm_password = request.form["confirm_password"]
 
+            # Password mismatch
             if password != confirm_password:
                 flash("Passwords do not match", "danger")
-                return render_template("register.html", step="1")
+                return render_template("register.html", step="1", username=username, email=email)
 
             existing_user = User.query.filter_by(email=email).first()
 
@@ -84,7 +98,7 @@ def register():
                     flash("Email already registered. Please login.", "info")
                     return redirect(url_for("login"))
                 else:
-                    # Resend OTP
+                    # Resend OTP for unverified user
                     otp_token = generate_email_verification_token(existing_user)
                     send_email(
                         to=existing_user.email,
@@ -92,15 +106,12 @@ def register():
                         message=f"Your OTP is {otp_token.token}"
                     )
                     flash("OTP resent! Check your email.", "success")
-                    return render_template(
-                        "register.html",
-                        step="2",
-                        email=email
-                    )
+                    return render_template("register.html", step="2", email=email)
 
-            # Create new user + profile
+            # Create new user
             new_user = create_user(username, email, password)
 
+            # Send OTP
             otp_token = generate_email_verification_token(new_user)
             send_email(
                 to=new_user.email,
@@ -109,104 +120,127 @@ def register():
             )
 
             flash("OTP sent! Check your email.", "success")
-            return render_template(
-                "register.html",
-                step="2",
-                email=email
-            )
+            return render_template("register.html", step="2", email=email)
 
-        # -------- STEP 2: VERIFY OTP --------
+        # -------- STEP 2: VERIFY OTP OR RESEND --------
         elif step == "2":
-            input_otp = request.form["otp"]
+            # Resend OTP button clicked
+            if request.form.get("resend_otp"):
+                user = User.query.filter_by(email=email).first()
+                if user and not user.is_email_verified:
+                    otp_token = generate_email_verification_token(user)
+                    send_email(
+                        to=user.email,
+                        subject="Verify your email",
+                        message=f"Your OTP is {otp_token.token}"
+                    )
+                    flash("OTP resent! Check your email.", "success")
+                return render_template("register.html", step="2", email=email)
+
+            # Normal OTP verification
+            input_otp = request.form.get("otp")
             user = User.query.filter_by(email=email).first()
 
             if not user or not verify_email_token(user, input_otp):
                 flash("Invalid OTP", "danger")
-                return render_template(
-                    "register.html",
-                    step="2",
-                    email=email
-                )
+                return render_template("register.html", step="2", email=email)
 
+            # Mark email as verified
             user.is_email_verified = True
             db.session.commit()
 
             flash("Email verified! You can now login.", "success")
             return redirect(url_for("login"))
 
+    # -------- HANDLE GET REQUEST --------
     return render_template("register.html", step=step, email=email)
 
-
-# LOGIN
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    step = request.args.get("step")
+    step = request.args.get("step")  # None | forgot_email | forgot_otp | forgot_reset
 
-    if request.method == "POST":
-        # -------- NORMAL LOGIN --------
-        if step is None:
-            email = request.form["email"]
-            password = request.form["password"]
-            user = User.query.filter_by(email=email).first()
-            if not user or not verify_password(user, password):
-                flash("Invalid email or password", "danger")
-                return render_template("login.html")
-            if not user.is_email_verified:
-                flash("Please verify email first", "warning")
-                return render_template("login.html")
-            login_user(user)
-            flash("Login successful", "success")
-            return redirect(url_for("profile"))
+    # ---------------- GET REQUEST ----------------
+    if request.method == "GET":
+        return render_template("login.html", step=step)
 
-        # -------- FORGOT PASSWORD: EMAIL --------
-        elif step == "forgot_email":
-            email = request.form["email"]
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                flash("Email not found", "danger")
-                return render_template("login.html", step="forgot_email")
-            
-            # OTP sirf yahi generate hoga
-            otp_token = generate_otp_token(user, token_type="password_reset", minutes_valid=15)
-            send_email(
-                to=email,
-                subject="Forgot Password email",
-                message=f"Your OTP is {otp_token.token}"
-            )
-            flash("OTP sent! Check your email.", "success")
-            # flash(f"OTP sent (demo): {otp_token.token}", "info")
-            return render_template("login.html", step="forgot_otp", email=email)
+    # ---------------- POST REQUEST ----------------
 
-        # -------- VERIFY OTP --------
-        elif step == "forgot_otp":
-            email = request.form["email"]  # hidden field se
-            otp = request.form["otp"]
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                flash("User not found", "danger")
-                return redirect(url_for("login"))
+    # ========== NORMAL LOGIN ==========
+    if step is None:
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
 
-            if not verify_otp_token(user, otp, token_type="password_reset"):
-                flash("Invalid OTP", "danger")
-                return render_template("login.html", step="forgot_otp", email=email)
+        user = User.query.filter_by(email=email).first()
 
-            # OTP valid hai, next step reset
-            return render_template("login.html", step="forgot_reset", email=email)
+        if not user or not verify_password(user, password):
+            flash("Invalid email or password", "danger")
+            return render_template("login.html", step=None, email=email)
 
-        # -------- RESET PASSWORD --------
-        elif step == "forgot_reset":
-            email = request.form["email"]
-            password = request.form["password"]
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                flash("User not found", "danger")
-                return redirect(url_for("login"))
+        if not user.is_email_verified:
+            flash("Please verify your email first", "warning")
+            return render_template("login.html", step=None, email=email)
 
-            reset_password(user, password)
-            flash("Password reset successful", "success")
+        login_user(user)
+        flash("Login successful", "success")
+        return redirect(url_for("profile"))
+
+    # ========== FORGOT PASSWORD: EMAIL ==========
+    if step == "forgot_email":
+        email = request.form.get("email", "").strip()
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash("Email not found", "danger")
+            return render_template("login.html", step="forgot_email", email=email)
+
+        otp_token = generate_otp_token(
+            user,
+            token_type="password_reset",
+            minutes_valid=15
+        )
+
+        send_email(
+            to=email,
+            subject="Password Reset OTP",
+            message=f"Your OTP is {otp_token.token}"
+        )
+
+        flash("OTP sent. Check your email.", "success")
+        return render_template("login.html", step="forgot_otp", email=email)
+
+    # ========== VERIFY OTP ==========
+    if step == "forgot_otp":
+        email = request.form.get("email", "")
+        otp = request.form.get("otp", "")
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash("User not found", "danger")
             return redirect(url_for("login"))
 
-    return render_template("login.html", step=step)
+        if not verify_otp_token(user, otp, token_type="password_reset"):
+            flash("Invalid or expired OTP", "danger")
+            return render_template("login.html", step="forgot_otp", email=email)
+
+        return render_template("login.html", step="forgot_reset", email=email)
+
+    # ========== RESET PASSWORD ==========
+    if step == "forgot_reset":
+        email = request.form.get("email", "")
+        password = request.form.get("password", "")
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash("User not found", "danger")
+            return redirect(url_for("login"))
+
+        reset_password(user, password)
+        flash("Password reset successful. Please login.", "success")
+        return redirect(url_for("login"))
+
+    # ---------------- FALLBACK ----------------
+    return redirect(url_for("login"))
+
 
 # LOGOUT
 @app.route("/logout")
@@ -215,6 +249,24 @@ def logout():
     logout_user()
     flash("Logged out", "success")
     return redirect(url_for("index"))
+
+
+@app.route("/author/<username>")
+def author_profile(username):
+    # Get user by username
+    profile = User.query.filter_by(username=username).first_or_404()
+
+    # Check if current user is viewing own profile
+    is_owner = current_user.is_authenticated and current_user.id == profile.id
+
+    return render_template(
+        "author_profile.html",
+        profile=profile,
+        is_owner=is_owner
+    )
+
+
+
 
 
 @app.route("/profile")
@@ -241,46 +293,44 @@ def edit_profile():
     profile = current_user.profile
 
     if request.method == "POST":
-        # Text fields
+        # ---------- USERNAME (User model) ----------
+        new_username = request.form.get("username", "").strip()
+
+        if new_username and new_username != current_user.username:
+            existing_user = User.query.filter_by(username=new_username).first()
+            if existing_user:
+                flash("Username already taken. Please choose another one.", "danger")
+                return redirect(url_for("edit_profile"))
+
+            current_user.username = new_username
+
+        # ---------- PROFILE TEXT FIELDS ----------
         profile.bio = request.form.get("bio", "")
         profile.about = request.form.get("about", "")
         profile.location = request.form.get("location", "")
         profile.website = request.form.get("website", "")
         profile.gender = request.form.get("gender", "prefer_not_to_say")
 
-        print('--------------------------------profile pic----------------------------')
-
-        # Handle profile picture upload
-        files = request.files.getlist("media")  # multiple files support
+        # ---------- PROFILE MEDIA ----------
+        files = request.files.getlist("media")
         for file in files:
-            print('---------------working-------------------')
-            if file and file.filename != "":
+            if file and file.filename:
                 media_type = get_media_type(file.filename)
                 if not media_type:
                     flash(f"File {file.filename} has unsupported type!", "danger")
                     continue
 
-                # Ensure upload folder exists
                 os.makedirs(UPLOAD_FOLDER_USERS, exist_ok=True)
 
-                # Create unique filename
                 unique_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
                 save_path = os.path.join(UPLOAD_FOLDER_USERS, unique_filename)
-                
-                print(f'[user profile pic Save path]: {save_path}')
                 file.save(save_path)
 
-                relative_path = f"uploads/users/{unique_filename}"
-                
-                profile.profile_picture = relative_path
-                print('saved path in database', relative_path)
+                profile.profile_picture = f"uploads/users/{unique_filename}"
 
-        
         db.session.commit()
-        print('-------------------committed------------------------')
         flash("Profile updated successfully!", "success")
-        return redirect(url_for("edit_profile"))
-
+        return redirect(url_for("profile"))
 
     return render_template("edit_profile.html", profile=profile)
 
@@ -451,10 +501,69 @@ def toggle_like(post_id):
     return redirect(request.referrer or url_for("index"))
 
 
+# @app.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
+# @login_required
+# def edit_post(post_id):
+#     # Get the post
+#     post = Post.query.get_or_404(post_id)
+
+#     # Security check
+#     if post.author != current_user:
+#         abort(403)
+
+#     # Get media for display
+#     all_media = get_post_media_by_post_id(post_id)
+#     images = [m for m in all_media if m.media_type == "image"]
+#     videos = [m for m in all_media if m.media_type == "video"]
+#     audios = [m for m in all_media if m.media_type == "audio"]
+
+#     if request.method == "POST":
+#         # Form fields
+#         title = request.form["title"]
+#         content = request.form["content"]
+#         category_id = request.form.get("category_id")  # optional, existing category select
+#         new_category_name = request.form.get("new_category")  # optional, new category input
+#         remove_image = request.form.get("remove_image")  # checkbox
+#         slug = slugify(title)
+#         post.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+#         # Handle category
+#         if new_category_name and new_category_name.strip():
+#             # Check if category already exists (case-insensitive)
+#             existing_category = Category.query.filter(
+#                 db.func.lower(Category.name) == new_category_name.strip().lower()
+#             ).first()
+#             if existing_category:
+#                 post.category_id = existing_category.id
+#             else:
+#                 # Create new category
+#                 new_cat = Category(name=new_category_name.strip())
+#                 db.session.add(new_cat)
+#                 db.session.commit()  # commit to get new_cat.id
+#                 post.category_id = new_cat.id
+#         elif category_id:
+#             post.category_id = category_id
+#         else:
+#             post.category_id = None
+
+#         # Update post fields
+#         post.title = title
+#         post.slug = slug
+#         post.content = content
+#         db.session.commit()
+
+#     return render_template(
+#         "edit_post.html",
+#         post=post,
+#         images=images,
+#         videos=videos,
+#         audios=audios
+#     )
+
+
 @app.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_post(post_id):
-    # Get the post
     post = Post.query.get_or_404(post_id)
 
     # Security check
@@ -467,45 +576,61 @@ def edit_post(post_id):
     videos = [m for m in all_media if m.media_type == "video"]
     audios = [m for m in all_media if m.media_type == "audio"]
 
+    # Fetch all categories for dropdown
+    categories = Category.query.order_by(Category.name).all()
+
     if request.method == "POST":
-        # Form fields
         title = request.form["title"]
         content = request.form["content"]
-        category_id = request.form.get("category_id")  # optional
-        remove_image = request.form.get("remove_image")  # checkbox
+        category_id = request.form.get("category_id")
+        new_category_name = request.form.get("new_category")
+        remove_image = request.form.get("remove_image")
         slug = slugify(title)
         post.updated_at = datetime.datetime.now(datetime.timezone.utc)
 
-        # Update post
+        # Handle category
+        if new_category_name and new_category_name.strip():
+            existing_category = Category.query.filter(
+                db.func.lower(Category.name) == new_category_name.strip().lower()
+            ).first()
+            if existing_category:
+                post.category_id = existing_category.id
+            else:
+                new_cat = Category(name=new_category_name.strip())
+                db.session.add(new_cat)
+                db.session.commit()
+                post.category_id = new_cat.id
+        elif category_id:
+            post.category_id = category_id
+        else:
+            post.category_id = None
+
+        # Update post fields
         post.title = title
         post.slug = slug
         post.content = content
-        post.category_id = category_id if category_id else None
-        db.session.commit()  # Commit updated post
+        db.session.commit()
 
-        # Handle file upload
+        # Handle image upload
         uploaded_file = request.files.get("image")
-
         if uploaded_file and uploaded_file.filename != "":
             media_type = get_media_type(uploaded_file.filename)
             if not media_type:
                 flash(f'File {uploaded_file.filename} has unsupported type!', 'danger')
             else:
-                # Delete old images
+                # Remove old images
                 for img in images:
                     old_path = os.path.join(UPLOAD_FOLDER, img.file_path)
                     if os.path.exists(old_path):
                         os.remove(old_path)
                     db.session.delete(img)
 
-                # Save new image
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
                 unique_filename = f"{uuid.uuid4().hex}_{secure_filename(uploaded_file.filename)}"
                 save_path = os.path.join(UPLOAD_FOLDER, unique_filename)
                 uploaded_file.save(save_path)
                 relative_path = f"uploads/{unique_filename}"
 
-                # Add new media record
                 new_media = PostMedia(
                     post_id=post.id,
                     file_path=relative_path,
@@ -532,7 +657,8 @@ def edit_post(post_id):
         post=post,
         images=images,
         videos=videos,
-        audios=audios
+        audios=audios,
+        categories=categories
     )
 
 

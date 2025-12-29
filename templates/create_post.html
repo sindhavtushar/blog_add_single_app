@@ -2,48 +2,85 @@
 {% block title %}Create New Post{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Create New Post</h2>
+<div class="create-post-wrapper">
 
-    <form method="POST" enctype="multipart/form-data">
+    <div class="create-post-card">
+        <h2><i class="bi bi-pencil-square me-2"></i>Create New Post</h2>
 
-        <!-- Title -->
-        <div class="mb-3">
-            <label for="title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="title" name="title" required>
-        </div>
+        <form method="POST" enctype="multipart/form-data">
 
-        <!-- Category -->
-        <div class="mb-3">
-            <label for="category_id" class="form-label">Category</label>
-            <select name="category_id" class="form-select">
-                <option value="">Select category</option>
-                {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="new_category" class="form-control mt-2" placeholder="Or add new category">
+            <!-- Title -->
+            <div class="mb-3">
+                <label for="title" class="form-label">Post Title</label>
+                <input type="text"
+                       class="form-control"
+                       id="title"
+                       name="title"
+                       placeholder="Enter post title"
+                       required>
+            </div>
 
-        </div>
+            <!-- Category -->
+            <div class="mb-3">
+                <label class="form-label">Category</label>
 
-        <!-- Content -->
-        <div class="mb-3">
-            <label for="content" class="form-label">Content</label>
-            <textarea class="form-control" id="content" name="content" rows="8" required></textarea>
-        </div>
+                <div class="category-inline">
+                    <select name="category_id" class="form-select">
+                        <option value="">Select existing category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
 
-        <!-- Media Upload -->
-        <div class="mb-3">
-            <label for="media" class="form-label">Upload Media (Image / Video / Audio)</label>
-            <input type="file" class="form-control" id="media" name="media" multiple
-                   accept="image/*,video/*,audio/*">
-            <small class="text-muted">You can upload multiple files at once.</small>
-        </div>
+                    <input type="text"
+                           name="new_category"
+                           class="form-control"
+                           placeholder="Or create new category">
+                </div>
+            </div>
 
-        <!-- Submit / Cancel Buttons -->
-        <button type="submit" class="btn btn-primary">Publish Post</button>
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+            <!-- Content -->
+            <div class="mb-3">
+                <label for="content" class="form-label">Post Content</label>
+                <textarea class="form-control"
+                          id="content"
+                          name="content"
+                          rows="8"
+                          placeholder="Write your post content here..."
+                          required></textarea>
+            </div>
 
-    </form>
+            <!-- Media Upload -->
+            <div class="mb-3">
+                <label class="form-label">Upload Media</label>
+
+                <div class="file-upload">
+                    <i class="bi bi-cloud-arrow-up fs-2 text-primary"></i>
+                    <p class="mb-1 fw-semibold">Upload Images / Videos / Audio</p>
+                    <small class="text-muted">Multiple files allowed</small>
+
+                    <input type="file"
+                           class="form-control mt-2"
+                           id="media"
+                           name="media"
+                           multiple
+                           accept="image/*,video/*,audio/*">
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-send me-1"></i> Publish
+                </button>
+
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary px-4">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+
 </div>
 {% endblock %}

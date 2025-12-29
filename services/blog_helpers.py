@@ -4,16 +4,19 @@ from sqlalchemy.orm import joinedload
 from database import db
 from models.db_tables import Category, Comment, Like, Post, PostMedia, User
 
-def get_all_blogs() -> Post:
-
+def get_all_blogs() -> list[Post]:
     return (
         db.session.query(Post)
         .options(
-            joinedload(Post.author),
-            joinedload(Post.category)
+            joinedload(Post.author).joinedload(User.profile),
+            joinedload(Post.category),
+            joinedload(Post.media)
         )
+        .order_by(Post.created_at.desc())
         .all()
     )
+
+
 
 def get_post_by_id(post_id):
     post = (
