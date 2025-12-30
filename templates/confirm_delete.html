@@ -1,0 +1,5 @@
+<form method="POST">
+    <p>Are you sure you want to delete "<strong>{{ post.title }}</strong>"?</p>
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{{ url_for('post_detail', post_id=post.id) }}">Cancel</a>
+</form>

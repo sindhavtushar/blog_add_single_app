@@ -58,18 +58,71 @@
                 {% endif %}
 
                 <!-- Post Content -->
+                
+                <!-- <div class="d-flex align-items-center gap-2 mb-2">
+                     email = {{post.author.email}} -->
+                    <!-- email = {{post.author.id}} -->
+                     
+                    
+                    <!-- <a  href="{{ url_for('author_profile', user_id=post.author.id) }}">
+                        <img src="{{ url_for('static',
+                            filename=post.author.profile.profile_picture
+                            if post.author.profile and post.author.profile.profile_picture
+                            else 'images/default-avatar.png') }}"
+                            class="rounded-circle border author-avatar"
+                            alt="{{ post.author.username }}">
+                    </a>
+                    <div>
+                        <a  href="{{ url_for('author_profile', user_id=post.author.id) }}"
+                           class="text-dark fw-semibold text-decoration-none">
+                            {{ post.author.username }}
+                        </a>
+                        <small class="text-muted d-block">
+                            <i class="bi bi-clock me-1"></i>
+                            {{ post.created_at.strftime('%b %d, %Y') }}
+                        </small>
+                    </div>
+                </div> -->
+
                 <div class="card-body">
                     <h1 class="card-title">{{ post.title }}</h1>
-                    <p class="text-muted small mb-3">
-                        By <strong>{{ post.author.username }}</strong> · {{ post.created_at.strftime('%b %d, %Y') }}
-                        {% if post.updated_at %}· Updated {{ post.updated_at.strftime('%b %d, %Y') }}{% endif %}
-                        {% if post.category %}· <span class="badge bg-secondary">{{ post.category.name }}</span>{% endif %}
-                    </p>
+                    <div class="d-flex align-items-center mb-3">
+                        <a  href="{{ url_for('author_profile', user_id=post.author.id) }}">
+                            <img src="{{ url_for('static',
+                                filename=post.author.profile.profile_picture
+                                if post.author.profile and post.author.profile.profile_picture
+                                else 'images/default-avatar.png') }}"
+                                class="rounded-circle border author-avatar me-2"
+                                alt="{{ post.author.username }}"
+                                width="40" height="40">
+                        </a>
+                        <div>
+                            <p class="text-muted small mb-0">
+                                <a  href="{{ url_for('author_profile', user_id=post.author.id) }}" 
+                                    class="text-dark fw-semibold text-decoration-none">
+                                    By <strong>{{ post.author.username }}</strong> 
+                                </a>
+                                · {{ post.created_at.strftime('%b %d, %Y') }}
+                                {% if post.updated_at and post.updated_at != post.created_at %}
+                                    · Updated {{ post.updated_at.strftime('%b %d, %Y') }}
+                                {% endif %}
+                                {% if post.category %}
+                                <span class="category-badge">
+                                    {{ post.category.name }}
+                                </span>
+                                {% endif %}
+                                <!-- {% if post.category %}
+                                    · <span class="badge bg-secondary">{{ post.category.name }}</span>
+                                {% endif %} -->
+                            </p>
+                        </div>
+                    </div>
 
                     <div class="post-content fs-6 lh-lg">
                         {{ post.content | safe }}
                     </div>
                 </div>
+
             </div>
 
             <!-- Interaction: Likes / Share -->

@@ -46,7 +46,6 @@ def load_user(user_id):
     return User.query.get(user_id)
 
 
-
 @app.route("/")
 def index():
     posts = get_all_blogs()
@@ -57,28 +56,19 @@ def index():
     
     return render_template("index.html", posts=posts)
 
-
-# # HOME
-# @app.route("/")
-# def index():
-#     posts = get_all_blogs()
-#     return render_template("index.html", posts=posts)
-    # print(f'[DEBUG]: Total posts: {len(posts)}')
-    # file_path
-    # return render_template('test.html', posts=posts)
-    # categories = all_categories()
-    # return render_template('test.html', categories=categories, posts=posts)
-
 # REGISTER
 @app.route("/register", methods=["GET", "POST"])
 def register():
+
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
     step = request.form.get("step") or request.args.get("step") or "1"
     email = request.form.get("email") or request.args.get("email")
 
-    # -------- HANDLE POST REQUEST --------
     if request.method == "POST":
 
-        # -------- STEP 1: USER DETAILS --------
+        # -------- STEP 1: user details --------
         if step == "1":
             username = request.form["username"].strip()
             email = request.form["email"].strip().lower()
@@ -122,7 +112,7 @@ def register():
             flash("OTP sent! Check your email.", "success")
             return render_template("register.html", step="2", email=email)
 
-        # -------- STEP 2: VERIFY OTP OR RESEND --------
+        # -------- STEP 2: verify OTP or resend --------
         elif step == "2":
             # Resend OTP button clicked
             if request.form.get("resend_otp"):
@@ -152,20 +142,23 @@ def register():
             flash("Email verified! You can now login.", "success")
             return redirect(url_for("login"))
 
-    # -------- HANDLE GET REQUEST --------
+    # -------- handling GET request --------
     return render_template("register.html", step=step, email=email)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
     step = request.args.get("step")  # None | forgot_email | forgot_otp | forgot_reset
 
-    # ---------------- GET REQUEST ----------------
+    # GET request ----------------
     if request.method == "GET":
         return render_template("login.html", step=step)
 
-    # ---------------- POST REQUEST ----------------
+    # POST request ----------------
 
-    # ========== NORMAL LOGIN ==========
+    # NORMAL login ----------------
     if step is None:
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
@@ -182,9 +175,9 @@ def login():
 
         login_user(user)
         flash("Login successful", "success")
-        return redirect(url_for("profile"))
+        return redirect(url_for("index"))
 
-    # ========== FORGOT PASSWORD: EMAIL ==========
+    # forgot password: EMAIL ----------------
     if step == "forgot_email":
         email = request.form.get("email", "").strip()
         user = User.query.filter_by(email=email).first()
@@ -208,7 +201,7 @@ def login():
         flash("OTP sent. Check your email.", "success")
         return render_template("login.html", step="forgot_otp", email=email)
 
-    # ========== VERIFY OTP ==========
+    # verify OTP ---------------------
     if step == "forgot_otp":
         email = request.form.get("email", "")
         otp = request.form.get("otp", "")
@@ -224,7 +217,7 @@ def login():
 
         return render_template("login.html", step="forgot_reset", email=email)
 
-    # ========== RESET PASSWORD ==========
+    # RESET password ----------------
     if step == "forgot_reset":
         email = request.form.get("email", "")
         password = request.form.get("password", "")
@@ -238,8 +231,8 @@ def login():
         flash("Password reset successful. Please login.", "success")
         return redirect(url_for("login"))
 
-    # ---------------- FALLBACK ----------------
     return redirect(url_for("login"))
+
 
 
 # LOGOUT
@@ -251,12 +244,9 @@ def logout():
     return redirect(url_for("index"))
 
 
-@app.route("/author/<username>")
-def author_profile(username):
-    # Get user by username
-    profile = User.query.filter_by(username=username).first_or_404()
-
-    # Check if current user is viewing own profile
+@app.route("/author/<uuid:user_id>")
+def author_profile(user_id):
+    profile = User.query.get_or_404(user_id)
     is_owner = current_user.is_authenticated and current_user.id == profile.id
 
     return render_template(
@@ -264,6 +254,21 @@ def author_profile(username):
         profile=profile,
         is_owner=is_owner
     )
+
+
+
+# @app.route("/author/<int:id>")
+# def author_profile(email):
+#     # Get user by email
+#     profile = User.query.filter_by(email=email).first_or_404()
+
+#     is_owner = current_user.is_authenticated and current_user.id == profile.id
+
+#     return render_template(
+#         "author_profile.html",
+#         profile=profile,
+#         is_owner=is_owner
+#     )
 
 
 
@@ -293,7 +298,7 @@ def edit_profile():
     profile = current_user.profile
 
     if request.method == "POST":
-        # ---------- USERNAME (User model) ----------
+        # USERNAME (User model) ----------
         new_username = request.form.get("username", "").strip()
 
         if new_username and new_username != current_user.username:
@@ -304,14 +309,14 @@ def edit_profile():
 
             current_user.username = new_username
 
-        # ---------- PROFILE TEXT FIELDS ----------
+        # PROFILE text fields ----------
         profile.bio = request.form.get("bio", "")
         profile.about = request.form.get("about", "")
         profile.location = request.form.get("location", "")
         profile.website = request.form.get("website", "")
         profile.gender = request.form.get("gender", "prefer_not_to_say")
 
-        # ---------- PROFILE MEDIA ----------
+        # PROFILE media ----------
         files = request.files.getlist("media")
         for file in files:
             if file and file.filename:
@@ -367,11 +372,10 @@ def get_media_type(filename):
             return media_type
     return None
 
-# ---------------- CREATE POST ----------------
+# CREATE POST
 @app.route("/create-post", methods=["GET", "POST"])
 @login_required
 def create_post():
-    from slugify import slugify  # make sure you have python-slugify installed
 
     if request.method == "POST":
         title = request.form["title"]
@@ -405,7 +409,7 @@ def create_post():
         db.session.commit()  # get post.id
 
         # Handle file uploads
-        files = request.files.getlist("media")  # multiple files support
+        files = request.files.getlist("media")
         for file in files:
             if file and file.filename != "":
                 media_type = get_media_type(file.filename)
@@ -435,10 +439,10 @@ def create_post():
 
         db.session.commit()
         flash("Post created successfully!", "success")
-        return redirect(url_for("index"))
+        return redirect(url_for("profile"))
 
     # GET request: render form
-    categories = db.session.query(Category).all()  # if you have categories
+    categories = db.session.query(Category).all()  # if categories are there
     return render_template("create_post.html", categories=categories)
 
 
@@ -499,67 +503,6 @@ def toggle_like(post_id):
     
     # Redirect back to the same page
     return redirect(request.referrer or url_for("index"))
-
-
-# @app.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
-# @login_required
-# def edit_post(post_id):
-#     # Get the post
-#     post = Post.query.get_or_404(post_id)
-
-#     # Security check
-#     if post.author != current_user:
-#         abort(403)
-
-#     # Get media for display
-#     all_media = get_post_media_by_post_id(post_id)
-#     images = [m for m in all_media if m.media_type == "image"]
-#     videos = [m for m in all_media if m.media_type == "video"]
-#     audios = [m for m in all_media if m.media_type == "audio"]
-
-#     if request.method == "POST":
-#         # Form fields
-#         title = request.form["title"]
-#         content = request.form["content"]
-#         category_id = request.form.get("category_id")  # optional, existing category select
-#         new_category_name = request.form.get("new_category")  # optional, new category input
-#         remove_image = request.form.get("remove_image")  # checkbox
-#         slug = slugify(title)
-#         post.updated_at = datetime.datetime.now(datetime.timezone.utc)
-
-#         # Handle category
-#         if new_category_name and new_category_name.strip():
-#             # Check if category already exists (case-insensitive)
-#             existing_category = Category.query.filter(
-#                 db.func.lower(Category.name) == new_category_name.strip().lower()
-#             ).first()
-#             if existing_category:
-#                 post.category_id = existing_category.id
-#             else:
-#                 # Create new category
-#                 new_cat = Category(name=new_category_name.strip())
-#                 db.session.add(new_cat)
-#                 db.session.commit()  # commit to get new_cat.id
-#                 post.category_id = new_cat.id
-#         elif category_id:
-#             post.category_id = category_id
-#         else:
-#             post.category_id = None
-
-#         # Update post fields
-#         post.title = title
-#         post.slug = slug
-#         post.content = content
-#         db.session.commit()
-
-#     return render_template(
-#         "edit_post.html",
-#         post=post,
-#         images=images,
-#         videos=videos,
-#         audios=audios
-#     )
-
 
 @app.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
 @login_required
@@ -666,8 +609,19 @@ def edit_post(post_id):
 @app.route("/post/<int:post_id>/delete", methods=["GET", "POST"])
 @login_required
 def delete_post(post_id):
-    return f'Delete page'
-    
+    post = Post.query.get_or_404(post_id)
+
+    if post.author_id != current_user.id:
+        abort(403)
+
+    if request.method == "POST":
+        db.session.delete(post)
+        db.session.commit()
+        flash("Post deleted successfully.", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("confirm_delete.html", post=post)
+
 
 if __name__ == "__main__":
     app.run(debug = True, host="0.0.0.0")

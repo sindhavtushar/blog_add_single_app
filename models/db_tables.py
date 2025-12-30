@@ -69,6 +69,12 @@ class UserProfile(db.Model):
 
     user = db.relationship("User", back_populates="profile")
 
+# followers = db.Table(
+#     "followers",
+#     db.Column("follower_id", UUID(as_uuid=True), db.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+#     db.Column("followed_id", UUID(as_uuid=True), db.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+#     db.Column("timestamp", db.DateTime, default=datetime.utcnow)
+# )
 
 # AUTH TOKENS
 
