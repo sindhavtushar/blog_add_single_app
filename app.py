@@ -177,7 +177,7 @@ def login():
         flash("Login successful", "success")
         return redirect(url_for("index"))
 
-    # forgot password: EMAIL ----------------
+    # forgot password: EMAIL ---------------- (OTP sending step)
     if step == "forgot_email":
         email = request.form.get("email", "").strip()
         user = User.query.filter_by(email=email).first()
@@ -446,7 +446,6 @@ def create_post():
     return render_template("create_post.html", categories=categories)
 
 
-
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
@@ -605,7 +604,6 @@ def edit_post(post_id):
     )
 
 
-
 @app.route("/post/<int:post_id>/delete", methods=["GET", "POST"])
 @login_required
 def delete_post(post_id):
@@ -621,6 +619,26 @@ def delete_post(post_id):
         return redirect(url_for("profile"))
 
     return render_template("confirm_delete.html", post=post)
+
+
+@app.route("/category/<string:cname>")
+def category_posts(cname):
+    print(f'[debug]: category name:{cname}')
+    category = Category.query.filter_by(name=cname).first_or_404()
+
+    posts = (
+        Post.query
+        .filter_by(category_id=category.id)
+        .order_by(Post.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "category_posts.html",
+        category=category,
+        posts=posts
+    )
+
 
 
 if __name__ == "__main__":
