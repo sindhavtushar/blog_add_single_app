@@ -82,11 +82,21 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
+# Flask Configuration
 FLASK_ENV=development
-SECRET_KEY=your-secret-key
-DATABASE_URL=sqlite:///blog.db
+SECRET_KEY=super-secret-key-change-this
+
+# Database Configuration
+DATABASE_URL=
+
+# Email / SMTP Configuration
+SENDER_EMAIL=
+SENDER_PASSWORD=
+
+# File Upload Configuration
 UPLOAD_FOLDER=static/uploads
 UPLOAD_FOLDER_USERS=static/uploads/users
+
 ```
 
 ---
