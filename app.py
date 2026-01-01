@@ -7,7 +7,7 @@ from slugify import slugify
 
 from services.blog_helpers import add_comment, all_categories, get_all_blogs, get_post_by_id, get_post_media_by_post_id, get_user_profile, like_post
 from services.email_service import send_email
-from flask import Flask, abort, request, render_template, redirect, send_from_directory, url_for, flash
+from flask import Config, Flask, abort, request, render_template, redirect, send_from_directory, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, login_required
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import load_only
@@ -16,11 +16,15 @@ from database import db
 from models.db_tables import Category, Like, Post, PostMedia, Rating, User, UserProfile
 from services.auth_helpers import create_user, generate_email_verification_token, generate_otp_token, reset_password, verify_email_token, verify_otp_token, verify_password
 
-app = Flask(__name__)
+from flask import Flask
+from config import Config 
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = secrets.token_hex()
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# # DEBUG (temporary)
+# print("UPLOAD_FOLDER from config:", app.config.get("UPLOAD_FOLDER"))
+# print("ALL CONFIG KEYS:", list(app.config.keys()))
 
 
 # Allowed file extensions
@@ -30,14 +34,13 @@ ALLOWED_EXTENSIONS = {
     "audio": {"mp3", "wav"}
 }
 
-UPLOAD_FOLDER = "D:/VisioByte/frameworks/flask/project/blog_app_single_app/T_APP/static/uploads"
-UPLOAD_FOLDER_USERS = "D:/VisioByte/frameworks/flask/project/blog_app_single_app/T_APP/static/uploads/users"
-
 # DB connection bind
 db.init_app(app)
 
 with app.app_context():
-    db.create_all() 
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["UPLOAD_FOLDER_USERS"], exist_ok=True)
+    db.create_all()
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
