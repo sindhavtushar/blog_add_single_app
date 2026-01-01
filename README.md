@@ -64,7 +64,8 @@ Before running the app, make sure you have:
 
 - 🐍 Python 3.8+
 - 📦 Flask
-- 📊 Any other dependencies (listed below)
+
+```
 
 You can install required packages with:
 
