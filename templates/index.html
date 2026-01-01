@@ -15,19 +15,15 @@
 
 {% if posts %}
 <div class="row g-4">
-
     {% for post in posts %}
     <div class="col-md-6 col-lg-4">
         <div class="card post-card h-100 border-0 shadow-sm">
 
             <!-- Post Image -->
-            {% set first_image = post.media
-            | selectattr('media_type', 'equalto', 'image')
-            | list | first %}
+            {% set first_image = post.media | selectattr('media_type', 'equalto', 'image') | list | first %}
             <div class="post-image-wrapper">
-                <img src="{{ url_for('static',
-                    filename=first_image.file_path if first_image else 'images/flask_theme.jpg') }}"
-                    alt="{{ post.title }}">
+                <img src="{{ url_for('static', filename=first_image.file_path if first_image else 'images/flask_theme.jpg') }}"
+                     alt="{{ post.title }}">
             </div>
 
             <div class="card-body d-flex flex-column">
@@ -35,17 +31,14 @@
                 <!-- Title + Category -->
                 <div class="post-title-wrapper mb-2">
                     <h5 class="mb-1">
-                        <a href="{{ url_for('post_detail', post_id=post.id) }}"
-                            class="text-dark fw-semibold title-hover">
+                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-dark fw-semibold title-hover">
                             {{ post.title }}
                         </a>
                     </h5>
-
                     {% if post.category %}
-                    <span class="category-badge text-decoration-none">
-                        <a href="{{ url_for('category_posts', cname=post.category.name) }}"
-                            class="text-decoration-none">
-                                {{ post.category.name }}
+                    <span class="category-badge">
+                        <a href="{{ url_for('category_posts', cname=post.category.name) }}">
+                            {{ post.category.name }}
                         </a>
                     </span>
                     {% endif %}
@@ -53,27 +46,19 @@
 
                 <!-- Author Info -->
                 <div class="d-flex align-items-center mb-3">
-                    <!-- Avatar with subtle hover shadow -->
                     <a href="{{ url_for('author_profile', user_id=post.author.id) }}" class="me-3">
                         <img src="{{ url_for('static', filename=post.author.profile.profile_picture if post.author.profile and post.author.profile.profile_picture else 'images/default-avatar.png') }}"
-                            class="rounded-circle border shadow-sm author-avatar" alt="{{ post.author.username }}"
-                            style="width: 45px; height: 45px; object-fit: cover;">
+                             class="rounded-circle border shadow-sm author-avatar" alt="{{ post.author.username }}">
                     </a>
-
                     <div>
-                        <!-- Username -->
-                        <a href="{{ url_for('author_profile', user_id=post.author.id) }}"
-                            class="text-dark fw-bold text-decoration-none d-block lh-1 mb-1">
+                        <a href="{{ url_for('author_profile', user_id=post.author.id) }}" class="text-dark fw-bold d-block mb-1">
                             {{ post.author.username }}
                         </a>
-
-                        <!-- Metadata Row -->
                         <div class="d-flex align-items-center gap-2 text-muted small">
                             <span>
                                 <i class="bi bi-calendar3 me-1"></i>
                                 {{ post.created_at.strftime('%b %d, %Y') }}
                             </span>
-
                             {% if post.updated_at and post.updated_at != post.created_at %}
                             <span class="text-secondary opacity-75">•</span>
                             <span title="Last updated" data-bs-toggle="tooltip">
@@ -85,66 +70,106 @@
                     </div>
                 </div>
 
-
                 <!-- Post Preview -->
                 <p class="text-muted mb-3">
                     {{ post.content | truncate(120) }}
                 </p>
 
-                <!-- Actions: Like & Comment -->
-                <div class="post-actions d-flex gap-2 mb-1">
+                <!-- Actions -->
+                <div class="post-actions d-flex flex-column gap-2 mb-2">
+                    <div class="d-flex gap-2">
 
-                    {% if current_user.is_authenticated %}
-                    <form method="POST" action="{{ url_for('toggle_like', post_id=post.id) }}">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                            ❤️ {{ post.likes | length }}
-                        </button>
-                    </form>
+                        {% if current_user.is_authenticated %}
+                        <!-- Like Form -->
+                        <form method="POST" action="{{ url_for('toggle_like', post_id=post.id) }}">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                ❤️ {{ post.likes | length }}
+                            </button>
+                        </form>
 
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3"
-                        onclick="toggleCommentForm({{ post.id }})">
-                        💬 {{ post.comments | length }}
-                    </button>
-
-                    {% else %}
-                    <!-- Like Button with Inline Toast -->
-                    <div class="position-relative">
+                        <!-- Comment Button -->
                         <button class="btn btn-outline-primary btn-sm rounded-pill px-3"
-                            onclick="showButtonToast(this, 'Please log in to like!', '{{ url_for('login') }}')">
-                            ❤️ {{ post.likes | length }}
-                        </button>
-                        <div class="button-toast"></div>
-                    </div>
-
-                    <!-- Comment Button with Inline Toast -->
-                    <div class="position-relative">
-                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3"
-                            onclick="showButtonToast(this, 'Please log in to comment!', '{{ url_for('login') }}')">
+                                onclick="toggleCommentForm({{ post.id }})">
                             💬 {{ post.comments | length }}
                         </button>
-                        <div class="button-toast"></div>
-                    </div>
-                    {% endif %}
 
+                        <div class="position-relative">
+                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                    data-bs-toggle="tooltip" title="Login to rate this post"
+                                    onclick="toggleRatingForm({{ post.id }})">
+                                Rating {% if post.ratings %}{{ (post.ratings|sum(attribute='rating') | float / post.ratings|length)|round(2) }}{% else %}N/A{% endif %} ⭐
+                            </button>
+                            <div class="button-toast"></div>
+                            <!-- you ratted:  -->
+                        </div>
+
+                        {% else %}
+                        <!-- Guest Buttons with Toast -->
+                        <div class="d-flex gap-2 flex-wrap">
+
+                            <!-- Like -->
+                            <div class="position-relative">
+                                <button class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                        onclick="showButtonToast(this, 'Please log in to like!', '{{ url_for('login') }}')">
+                                    ❤️ {{ post.likes | length }}
+                                </button>
+                                <div class="button-toast"></div>
+                            </div>
+
+                            <!-- Comment -->
+                            <div class="position-relative">
+                                <button class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                        onclick="showButtonToast(this, 'Please log in to comment!', '{{ url_for('login') }}')">
+                                    💬 {{ post.comments | length }}
+                                </button>
+                                <div class="button-toast"></div>
+                            </div>
+
+                            <!-- Rate -->
+                            <div class="position-relative">
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                        data-bs-toggle="tooltip" title="Login to rate this post"
+                                        onclick="showButtonToast(this, 'Please log in to rate!', '{{ url_for('login') }}')">
+                                    ⭐ Rate {% if post.ratings %}{{ (post.ratings|sum(attribute='rating') | float / post.ratings|length)|round(2) }}{% else %}N/A{% endif %}
+                                </button>
+                                <div class="button-toast"></div>
+                            </div>
+
+                        </div>
+
+                        {% endif %}
+
+                    </div>
                 </div>
 
-                <!-- Comment Section -->
+                <!-- Comment Form -->
                 <div id="comment-form-{{ post.id }}" class="comment-form mt-2">
                     {% if current_user.is_authenticated %}
                     <form method="POST" action="{{ url_for('post_comment', post_id=post.id) }}">
-                        <textarea class="form-control mb-2" rows="3" name="comment" placeholder="Write your comment..."
-                            required></textarea>
-                        <button class="btn btn-primary btn-sm w-100 rounded-pill">
-                            Post Comment
-                        </button>
+                        <textarea class="form-control mb-2" rows="3" name="comment" placeholder="Write your comment..." required></textarea>
+                        <button class="btn btn-primary btn-sm w-100 rounded-pill">Post Comment</button>
                     </form>
                     {% endif %}
+                </div>
+
+                <!-- Rating Section -->
+                <div id="rating-form-{{ post.id }}" class="comment-form mt-2" >
+                    <form method="POST" action="{{ url_for('rate_post', post_id=post.id) }}" class="d-flex align-items-center gap-1">
+                        {% set user_rating = post.ratings|selectattr('user_id','equalto',current_user.id)|first %}
+                        <select name="rating" id="rating-{{ post.id }}" class="form-select form-select-sm w-auto">
+                            {% for i in range(1,6) %}
+                                <option value="{{ i }}" {% if user_rating and user_rating.rating == i %}selected{% endif %}>{{ i }}⭐</option>
+                            {% endfor %}
+                        </select>
+                        <!-- <label for="rating-{{ post.id }}" class="mb-0"></label> -->
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Rate</button>
+                    </form>
                 </div>
 
                 <!-- Read More -->
                 <div class="mt-auto">
                     <a href="{{ url_for('post_detail', post_id=post.id) }}"
-                        class="btn btn-outline-primary btn-sm w-100 rounded-pill mt-3">
+                       class="btn btn-outline-primary btn-sm w-100 rounded-pill mt-3">
                         Read More →
                     </a>
                 </div>
@@ -153,107 +178,10 @@
         </div>
     </div>
     {% endfor %}
-
 </div>
 {% else %}
 <p class="text-muted">No posts available.</p>
 {% endif %}
-
-<!-- Styles -->
-<style>
-    .post-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .post-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.08);
-    }
-
-    .post-image-wrapper {
-        height: 180px;
-        overflow: hidden;
-        border-top-left-radius: var(--radius);
-        border-top-right-radius: var(--radius);
-    }
-
-    .post-image-wrapper img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .title-hover:hover {
-        color: var(--brand);
-    }
-
-    .author-avatar {
-        width: 40px;
-        height: 40px;
-        object-fit: cover;
-    }
-
-    .category-badge {
-        display: inline-block;
-        background-color: var(--brand-light);
-        color: var(--brand-dark);
-        font-weight: 600;
-        font-size: 0.75rem;
-        padding: 4px 10px;
-        border-radius: var(--radius);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: var(--shadow-soft);
-    }
-
-    .button-toast {
-        position: absolute;
-        top: -35px;
-        left: 50%;
-        transform: translateX(-50%) translateY(0);
-        background-color: var(--brand);
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        border-radius: var(--radius);
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: auto;
-        transition: opacity 0.3s, transform 0.3s;
-        z-index: 10;
-    }
-
-    .button-toast.show {
-        opacity: 1;
-        transform: translateX(-50%) translateY(-5px);
-    }
-
-    .button-toast a {
-        color: #fff;
-        text-decoration: underline;
-    }
-
-    .comment-form {
-        display: none;
-        animation: fadeSlide 0.25s ease forwards;
-    }
-
-    .comment-form.show {
-        display: block;
-    }
-
-    @keyframes fadeSlide {
-        from {
-            opacity: 0;
-            transform: translateY(-6px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
 
 <!-- JS -->
 <script>
@@ -267,7 +195,7 @@
         {% endif %}
     }
 
-    function showButtonToast(btn, message, href = null) {
+    function showButtonToast(btn, message, href=null) {
         const toast = btn.nextElementSibling;
         if (!toast) return;
 
@@ -279,6 +207,15 @@
 
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+    function toggleRatingForm(postId) {
+        {% if current_user.is_authenticated %}
+        const form = document.getElementById(`rating-form-${postId}`);
+        form.classList.toggle('show');
+        {% else %}
+        const btn = event.currentTarget;
+        showButtonToast(btn, 'Please log in to comment!', '{{ url_for('login') }}');
+        {% endif %}
     }
 </script>
 

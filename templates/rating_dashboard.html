@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Rating Board - Average Ratings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Posts with Average Ratings</h2>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Index</th>
+                    <th>Post ID</th>
+                    <th>Post Name</th>
+                    <th>Author Name</th>
+                    <th>Ratings</th>
+                    <th>Average Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ post.id }}</td>
+                    <td>{{ post.title }}</td>
+                    <td>{{ post.author.username }}</td>
+                    <td>
+                        {% if post.ratings %}
+                            {% for r in post.ratings %}
+                                {{ r.rating }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if post.ratings %}
+                            {{ (post.ratings|sum(attribute='rating') | float / post.ratings|length)|round(2) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

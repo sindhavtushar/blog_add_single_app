@@ -52,6 +52,37 @@ body {
     color: #ffffff;
 }
 
+
+
+/* Container to maintain size */
+.user-avatar-container {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure the image is a circle and fills the area */
+.profile-img-nav {
+    width: 35px;
+    height: 35px;
+    object-fit: cover; /* Prevents distortion */
+    border: 1px solid #dee2e6;
+}
+
+/* Fallback Initial style */
+.avatar-initial {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+
 /* Avatar circle */
 .user-avatar {
     width: 34px;

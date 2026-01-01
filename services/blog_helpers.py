@@ -95,7 +95,11 @@ def get_user_profile(user_id):
         "posts": posts,
         "total_likes": total_likes,
         "total_comments": total_comments,
-        "user_profile_image":user.profile.profile_picture
+        "user_profile_image":user.profile.profile_picture,
+        "bio":user.profile.bio,
+        "about": user.profile.about,
+        "website": user.profile.website,
+        "location": user.profile.location,
     }
 
     return profile_data

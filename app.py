@@ -10,9 +10,10 @@ from services.email_service import send_email
 from flask import Flask, abort, request, render_template, redirect, send_from_directory, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, login_required
 from werkzeug.utils import secure_filename
+from sqlalchemy.orm import load_only
 
 from database import db
-from models.db_tables import Category, Like, Post, PostMedia, User, UserProfile
+from models.db_tables import Category, Like, Post, PostMedia, Rating, User, UserProfile
 from services.auth_helpers import create_user, generate_email_verification_token, generate_otp_token, reset_password, verify_email_token, verify_otp_token, verify_password
 
 app = Flask(__name__)
@@ -49,12 +50,22 @@ def load_user(user_id):
 @app.route("/")
 def index():
     posts = get_all_blogs()
-    
+
     # Filter out posts authored by the current user if logged in
     if current_user.is_authenticated:
         posts = [post for post in posts if post.author_id != current_user.id]
     
     return render_template("index.html", posts=posts)
+
+@app.route("/rating_dashboard")
+def rating_dashboard():
+    posts = Post.query.all()
+
+    if current_user.is_authenticated:
+        posts = [p for p in posts if p.author_id != current_user.id]
+
+    return render_template("rating_dashboard.html", posts=posts)
+
 
 # REGISTER
 @app.route("/register", methods=["GET", "POST"])
@@ -254,24 +265,6 @@ def author_profile(user_id):
         profile=profile,
         is_owner=is_owner
     )
-
-
-
-# @app.route("/author/<int:id>")
-# def author_profile(email):
-#     # Get user by email
-#     profile = User.query.filter_by(email=email).first_or_404()
-
-#     is_owner = current_user.is_authenticated and current_user.id == profile.id
-
-#     return render_template(
-#         "author_profile.html",
-#         profile=profile,
-#         is_owner=is_owner
-#     )
-
-
-
 
 
 @app.route("/profile")
@@ -479,7 +472,36 @@ def post_like(post_id):
 
     return redirect(url_for("post_detail", post_id=post_id))
 
-from flask import redirect, url_for, request, flash
+# RATE POST
+@app.route('/rate/<int:post_id>', methods=['POST'])
+@login_required
+def rate_post(post_id):
+    user_id = current_user.get_id()
+    
+    already_rating = Rating.query.filter_by(post_id=post_id, user_id=user_id).first()
+
+    value = request.form.get('rating')
+    if not value:
+        flash("Invalid rating value", "danger")
+        return redirect(url_for('index'))
+    value = int(value)
+
+    if already_rating:
+        old_val = already_rating.rating
+        already_rating.rating = value
+        flash(f"Rating updated from {old_val} to {value}", "success")
+    else:
+        new_record = Rating(
+            rating=value,
+            user_id=user_id,
+            post_id=post_id
+        )
+        db.session.add(new_record)
+        flash("Rating added successfully", "success")
+
+    db.session.commit()
+    return redirect(url_for('index'))
+
 
 @app.route("/like/<int:post_id>", methods=["POST"])
 @login_required

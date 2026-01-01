@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from flask_login import UserMixin
 from sqlalchemy import (
-    Column, String, Integer, Boolean, Text, DateTime,
+    CheckConstraint, Column, String, Integer, Boolean, Text, DateTime,
     ForeignKey, UniqueConstraint, Enum
 )
 from sqlalchemy.orm import relationship
@@ -28,6 +28,7 @@ class User(db.Model, UserMixin):
     posts = relationship("Post", back_populates="author", cascade="all, delete")
     comments = relationship("Comment", back_populates="user", cascade="all, delete")
     likes = relationship("Like", back_populates="user", cascade="all, delete")
+    ratings = relationship("Rating", back_populates="user")
     tokens = relationship("AuthToken", back_populates="user", cascade="all, delete")
     sessions = relationship("Session", back_populates="user", cascade="all, delete")
     # One-to-one profile relationship
@@ -139,6 +140,7 @@ class Post(db.Model):
     media = relationship("PostMedia", back_populates="post", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="post", cascade="all, delete")
     likes = relationship("Like", back_populates="post", cascade="all, delete")
+    ratings = relationship("Rating", back_populates="post", cascade="all, delete-orphan")
     tags = relationship("Tag", secondary="post_tags", back_populates="posts")
 
 
@@ -194,7 +196,7 @@ class Comment(db.Model):
 # LIKES
 
 class Like(db.Model):
-    __tablename__ = "likes"
+    __tablename__ = "likes" 
 
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
@@ -206,3 +208,33 @@ class Like(db.Model):
     __table_args__ = (
         UniqueConstraint("user_id", "post_id", name="unique_user_post_like"),
     )
+
+# Rating Model
+
+class Rating(db.Model):
+    __tablename__ = "ratings"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    rating = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "rating BETWEEN 1 AND 5",
+            name="rating_range_check"
+        ),
+        UniqueConstraint(
+            "post_id",
+            "user_id",
+            name="unique_user_post_rating"
+        ),
+    )
+
+    # Relationships
+    post = relationship("Post", back_populates="ratings")
+    user = relationship("User", back_populates="ratings")
+
+    def __repr__(self):
+        return f"<Rating {self.rating}>"

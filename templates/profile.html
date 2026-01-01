@@ -4,24 +4,28 @@
 {% block content %}
 
 <!-- Profile Header -->
-<div class="card profile-header mb-4">
-    <div class="d-flex flex-md-row flex-column align-items-center gap-4">
+<div class="card profile-header mb-4 p-4">
+    <div class="d-flex flex-column flex-md-row align-items-center gap-4">
 
         <!-- Avatar -->
-        {% if profile.user_profile_image %}
-        <img src="{{ url_for('static', filename=profile.user_profile_image) }}" alt="User profile Image">
-        {% else %}
-        <div class="avatar-initial bg-primary text-white d-flex justify-content-center align-items-center shadow-sm"
-            style="font-size:42px; font-weight:600;">
-            {{ profile.username[0]|upper }}
+        <div class="profile-avatar">
+            {% if profile.user_profile_image %}
+                <img src="{{ url_for('static', filename=profile.user_profile_image) }}"
+                     alt="User profile image"
+                     class="rounded-circle img-fluid">
+            {% else %}
+                <div class="avatar-initial bg-primary text-white d-flex justify-content-center align-items-center rounded-circle">
+                    {{ profile.username[0]|upper }}
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <!-- User Info -->
-        <div class="text-center text-md-start flex-grow-1">
+        <div class="flex-grow-1 text-center text-md-start">
             <h3 class="fw-bold mb-1">{{ profile.username }}</h3>
-            <p class="text-muted mb-1">{{ profile.email }}</p>
-            <div class="d-flex flex-wrap gap-2 mt-2">
+            <p class="text-muted mb-2">{{ profile.email }}</p>
+
+            <div class="d-flex justify-content-center justify-content-md-start gap-2 mb-3">
                 <span class="badge {{ 'bg-success' if profile.is_active else 'bg-danger' }}">
                     {{ 'Active' if profile.is_active else 'Inactive' }}
                 </span>
@@ -29,16 +33,46 @@
                     Joined {{ profile.created_at.strftime('%b %d, %Y') }}
                 </span>
             </div>
+
+            <hr>
+
+            <!-- About Section -->
+            <div class="about-user">
+                <h5 class="fw-semibold mb-2">About</h5>
+
+                {% if profile.bio %}
+                    <p class="text-muted mb-1">{{ profile.bio }}</p>
+                {% endif %}
+
+                {% if profile.about %}
+                    <p class="text-muted mb-1">{{ profile.about }}</p>
+                {% endif %}
+
+                {% if profile.location %}
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-geo-alt"></i> {{ profile.location }}
+                    </p>
+                {% endif %}
+
+                {% if profile.website %}
+                    <p class="mb-0">
+                        <i class="bi bi-link-45deg"></i>
+                        <a href="{{ profile.website }}" target="_blank">{{ profile.website }}</a>
+                        
+                    </p>
+                {% endif %}
+            </div>
         </div>
 
-        <div class="mt-3 mt-md-0">
-            <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary shadow-sm">
+        <!-- Action Button -->
+        <div class="text-center text-md-end">
+            <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary">
                 <i class="bi bi-pencil-square"></i> Edit Profile
             </a>
         </div>
-
     </div>
 </div>
+
 
 <!-- Stats + Action -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 profile-stats">
@@ -138,10 +172,21 @@
                         </button>
                     </form>
 
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3"
                         onclick="toggleCommentForm({{ post.id }})">
                         💬 {{ post.comments | length }}
                     </button>
+
+                    <!-- Rate -->
+                    <div class="position-relative">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                data-bs-toggle="tooltip" title="Login to rate this post"
+                                onclick="toggleRatingForm({{ post.id }})">
+                             Rating {% if post.ratings %}{{ (post.ratings|sum(attribute='rating') | float / post.ratings|length)|round(2) }}{% else %}N/A{% endif %} ⭐
+                        </button>
+                        <div class="button-toast"></div>
+                    </div>
+
                     {% endif %}
 
                 </div>
@@ -157,6 +202,20 @@
                         </button>
                     </form>
                     {% endif %}
+                </div>
+                
+                <!-- Rating Section -->
+                <div id="rating-form-{{ post.id }}" class="comment-form mt-2" >
+                    <form method="POST" action="{{ url_for('rate_post', post_id=post.id) }}" class="d-flex align-items-center gap-1">
+                        {% set user_rating = post.ratings|selectattr('user_id','equalto',current_user.id)|first %}
+                        <select name="rating" id="rating-{{ post.id }}" class="form-select form-select-sm w-auto">
+                            {% for i in range(1,6) %}
+                                <option value="{{ i }}" {% if user_rating and user_rating.rating == i %}selected{% endif %}>{{ i }}⭐</option>
+                            {% endfor %}
+                        </select>
+                        <!-- <label for="rating-{{ post.id }}" class="mb-0"></label> -->
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Rate</button>
+                    </form>
                 </div>
 
                 <!-- Read More -->
@@ -177,5 +236,44 @@
     You haven't written any blogs yet.
 </p>
 {% endif %}
+
+<style>
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+}
+
+.profile-avatar img,
+.avatar-initial {
+    width: 100%;
+    height: 100%;
+    font-size: 42px;
+    font-weight: 600;
+    object-fit: cover;
+}
+</style>
+
+
+<script>
+    function toggleCommentForm(postId) {
+        {% if current_user.is_authenticated %}
+        const form = document.getElementById(`comment-form-${postId}`);
+        form.classList.toggle('show');
+        {% else %}
+        const btn = event.currentTarget;
+        showButtonToast(btn, 'Please log in to comment!', '{{ url_for('login') }}');
+        {% endif %}
+    }
+    function toggleRatingForm(postId) {
+        {% if current_user.is_authenticated %}
+        const form = document.getElementById(`rating-form-${postId}`);
+        form.classList.toggle('show');
+        {% else %}
+        const btn = event.currentTarget;
+        showButtonToast(btn, 'Please log in to comment!', '{{ url_for('login') }}');
+        {% endif %}
+    }
+</script>
 
 {% endblock %}
